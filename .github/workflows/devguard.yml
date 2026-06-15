@@ -5,9 +5,11 @@ on:
   push:
  
 jobs:
-  devguard-scanner:
-    uses: l3montree-dev/devguard-action/.github/workflows/full.yml@main
-    with:
-        asset-name: "l3montree-cybersecurity/projects/devguard/assets/devguard-operator"
-    secrets:
-        devguard-token: ${{ secrets.DEVGUARD_TOKEN }} 
+    call-devsecops:
+        uses: l3montree-dev/devguard-action/.github/workflows/full.yml@main
+        with:
+            asset-name: "l3montree-cybersecurity/projects/devguard/assets/devguard-operator"
+            api-url: "https://api.main.devguard.org"
+            web-ui: "https://main.devguard.org"
+        secrets:
+            devguard-token: "${{ secrets.DEVGUARD_TOKEN }}" 
