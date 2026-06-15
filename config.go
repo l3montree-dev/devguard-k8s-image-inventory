@@ -13,7 +13,7 @@ type Config struct {
 	Verbosity          string   `env:"SBOM_VERBOSITY" flag:"verbosity"`
 
 	DevGuardToken  string `yaml:"devGuardToken" env:"DEVGUARD_TOKEN" flag:"token"`
-	DevGuardApiURL string `yaml:"devGuardApiURL" env:"DEVGUARD_API_URL" flag:"apiUrl"`
+	DevGuardProjectURL string `yaml:"devGuardProjectURL" env:"DEVGUARD_PROJECT_URL" flag:"projectUrl"`
 }
 
 var (
@@ -28,7 +28,7 @@ var (
 	ConfigKeyRegistryProxy      = "registryProxy"
 
 	ConfigDevGuardToken  = "token"
-	ConfigDevGuardApiURL = "apiUrl"
+	ConfigDevGuardProjectURL = "projectUrl"
 
 	OperatorConfig *Config
 )

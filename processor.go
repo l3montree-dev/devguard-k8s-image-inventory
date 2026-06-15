@@ -10,6 +10,7 @@ import (
 	libk8s "github.com/ckotzbauer/libk8soci/pkg/kubernetes"
 	"github.com/ckotzbauer/libk8soci/pkg/oci"
 	"github.com/l3montree-dev/devguard-operator/kubernetes"
+	parser "github.com/novln/docker-parser"
 
 	"k8s.io/client-go/tools/cache"
 
@@ -105,7 +106,7 @@ func (p *Processor) scanPod(pod libk8s.PodInfo) {
 func initTargets() []Target {
 	targets := make([]Target, 0)
 
-	t := NewDevGuardTarget(OperatorConfig.DevGuardToken, OperatorConfig.DevGuardApiURL, nil)
+	t := NewDevGuardTarget(OperatorConfig.DevGuardToken, OperatorConfig.DevGuardProjectURL, nil)
 	targets = append(targets, t)
 
 	return targets
@@ -160,17 +161,17 @@ func getChangedContainers(oldPod, newPod libk8s.PodInfo) ([]*libk8s.ContainerInf
 }
 
 func containsImage(images []kubernetes.ImageInNamespace, target kubernetes.ImageInNamespace) bool {
-	targetRef := target.Image.Image
-	if !strings.Contains(targetRef, "/") {
-		targetRef = "docker.io/library/" + targetRef
+	targetParsed, err := parser.Parse(target.Image.Image)
+	if err != nil {
+		return false
 	}
 
 	for _, candidate := range images {
-		candidateRef := candidate.Image.Image
-		if !strings.Contains(candidateRef, "/") {
-			candidateRef = "docker.io/library/" + candidateRef
+		candidateParsed, err := parser.Parse(candidate.Image.Image)
+		if err != nil {
+			continue
 		}
-		if candidate.Namespace == target.Namespace && candidateRef == targetRef {
+		if candidate.Namespace == target.Namespace && candidateParsed.Remote() == targetParsed.Remote() {
 			return true
 		}
 	}

@@ -15,7 +15,7 @@ import (
 )
 
 type DevGuardTarget struct {
-	apiUrl string
+	projectURL string
 	token  string
 	tags   []string
 	client devguard.HTTPClient
@@ -29,7 +29,7 @@ type DevGuardRequest struct {
 	Sbom         json.RawMessage `json:"sbom,omitempty"`
 }
 
-type devguardAsset struct {
+type projectAssetsResponse struct {
 	ProjectName string `json:"projectName"`
 	Assets      []struct {
 		Name     string   `json:"name"`
@@ -37,11 +37,11 @@ type devguardAsset struct {
 	} `json:"assets"`
 }
 
-func NewDevGuardTarget(token, apiUrl string, tags []string) *DevGuardTarget {
-	client := devguard.NewHTTPClient(token, apiUrl)
+func NewDevGuardTarget(token, projectURL string, tags []string) *DevGuardTarget {
+	client := devguard.NewHTTPClient(token, projectURL)
 
 	return &DevGuardTarget{
-		apiUrl: apiUrl,
+		projectURL: projectURL,
 		token:  token,
 		tags:   tags,
 		client: client,
@@ -49,7 +49,7 @@ func NewDevGuardTarget(token, apiUrl string, tags []string) *DevGuardTarget {
 }
 
 func (g *DevGuardTarget) LoadImages() ([]kubernetes.ImageInNamespace, error) {
-	req, err := http.NewRequest("GET", g.apiUrl, nil)
+	req, err := http.NewRequest("GET", g.projectURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func (g *DevGuardTarget) LoadImages() ([]kubernetes.ImageInNamespace, error) {
 	}
 	defer resp.Body.Close()
 
-	var assets []devguardAsset
+	var assets []projectAssetsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&assets); err != nil {
 		return nil, err
 	}
@@ -105,8 +105,9 @@ func (g *DevGuardTarget) ProcessSbom(ctx *TargetContext) error {
 	if err != nil {
 		return err
 	}
-
-	req, err := http.NewRequest("POST", g.apiUrl, strings.NewReader(string(jsonBody)))
+	providerID := "devguard-operator"
+	url := g.projectURL + "/dn/:" + providerID
+	req, err := http.NewRequest("POST", url, strings.NewReader(string(jsonBody)))
 	if err != nil {
 		return err
 	}
@@ -148,7 +149,7 @@ func (g *DevGuardTarget) Remove(images []kubernetes.ImageInNamespace) error {
 				return
 			}
 
-			req, err := http.NewRequest("POST", g.apiUrl, strings.NewReader(string(jsonBody)))
+			req, err := http.NewRequest("POST", g.projectURL, strings.NewReader(string(jsonBody)))
 			if err != nil {
 				slog.Error("could not create delete request", "err", err)
 				return
