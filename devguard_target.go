@@ -29,16 +29,7 @@ type DevGuardRequest struct {
 	Sbom         json.RawMessage `json:"sbom,omitempty"`
 }
 
-type devGuardAssetVersion struct {
-	Name string `json:"name"`
-}
-
-type devGuardAssetEntry struct {
-	Name     string                 `json:"name"`
-	Versions []devGuardAssetVersion `json:"assetVersions"`
-}
-
-type devGuardAsset struct {
+type devguardAsset struct {
 	ProjectName string `json:"projectName"`
 	Assets      []struct {
 		Name     string   `json:"name"`
@@ -69,7 +60,7 @@ func (g *DevGuardTarget) LoadImages() ([]kubernetes.ImageInNamespace, error) {
 	}
 	defer resp.Body.Close()
 
-	var assets []devGuardAsset
+	var assets []devguardAsset
 	if err := json.NewDecoder(resp.Body).Decode(&assets); err != nil {
 		return nil, err
 	}
