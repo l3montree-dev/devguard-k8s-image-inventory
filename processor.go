@@ -10,6 +10,7 @@ import (
 	libk8s "github.com/ckotzbauer/libk8soci/pkg/kubernetes"
 	"github.com/ckotzbauer/libk8soci/pkg/oci"
 	"github.com/l3montree-dev/devguard-operator/kubernetes"
+	parser "github.com/novln/docker-parser"
 
 	"k8s.io/client-go/tools/cache"
 
@@ -105,7 +106,7 @@ func (p *Processor) scanPod(pod libk8s.PodInfo) {
 func initTargets() []Target {
 	targets := make([]Target, 0)
 
-	t := NewDevGuardTarget(OperatorConfig.DevGuardToken, OperatorConfig.DevGuardApiURL, OperatorConfig.DevGuardProjectName, nil)
+	t := NewDevGuardTarget(OperatorConfig.DevGuardToken, OperatorConfig.DevGuardProjectURL, nil)
 	targets = append(targets, t)
 
 	return targets
@@ -159,9 +160,18 @@ func getChangedContainers(oldPod, newPod libk8s.PodInfo) ([]*libk8s.ContainerInf
 	return addedContainers, removedContainers
 }
 
-func containsImage(images []kubernetes.ImageInNamespace, image kubernetes.ImageInNamespace) bool {
-	for _, i := range images {
-		if i.String() == image.String() {
+func containsImage(images []kubernetes.ImageInNamespace, target kubernetes.ImageInNamespace) bool {
+	targetParsed, err := parser.Parse(target.Image.Image)
+	if err != nil {
+		return false
+	}
+
+	for _, candidate := range images {
+		candidateParsed, err := parser.Parse(candidate.Image.Image)
+		if err != nil {
+			continue
+		}
+		if candidate.Namespace == target.Namespace && candidateParsed.Remote() == targetParsed.Remote() {
 			return true
 		}
 	}
@@ -226,13 +236,6 @@ func (p *Processor) runInformerAsync(informer cache.SharedIndexInformer) {
 
 	go func() {
 
-		for _, t := range p.Targets {
-			err := t.Initialize()
-			if err != nil {
-				slog.Error("Target could not be initialized", "err", err)
-			}
-		}
-
 		slog.Info("Start pod-informer")
 		informer.Run(stop)
 		slog.Info("Pod-informer has stopped")
@@ -265,6 +268,7 @@ func (p *Processor) runInformerAsync(informer cache.SharedIndexInformer) {
 				info := p.K8s.Client.ExtractPodInfos(*pod)
 				for _, c := range info.Containers {
 					allImages = append(allImages, kubernetes.ImageInNamespace{Namespace: info.PodNamespace, Image: c.Image})
+
 					if !containsImage(targetImages, kubernetes.ImageInNamespace{
 						Image:     c.Image,
 						Namespace: info.PodNamespace,
