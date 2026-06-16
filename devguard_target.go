@@ -23,18 +23,18 @@ type DevGuardTarget struct {
 }
 
 type DevGuardRequest struct {
-	Verb         string          `json:"verb"`
-	ProjectName  string          `json:"projectName"`
-	AssetName    string          `json:"assetName"`
-	AssetVersion string          `json:"assetVersion"`
-	Sbom         json.RawMessage `json:"sbom,omitempty"`
+	Verb                    string          `json:"verb"`
+	ProjectExternalEntityID string          `json:"projectExternalEntityId"`
+	AssetExternalEntityID   string          `json:"assetExternalEntityId"`
+	AssetVersion            string          `json:"assetVersion"`
+	Sbom                    json.RawMessage `json:"sbom,omitempty"`
 }
 
 type projectAssetsResponse struct {
-	ProjectName string `json:"projectName"`
-	Assets      []struct {
-		Name     string   `json:"name"`
-		Versions []string `json:"versions"`
+	ProjectExternalEntityID string `json:"projectExternalEntityId"`
+	Assets                  []struct {
+		AssetExternalEntityID string   `json:"assetExternalEntityId"`
+		Versions              []string `json:"versions"`
 	} `json:"assets"`
 }
 
@@ -74,9 +74,9 @@ func (g *DevGuardTarget) LoadImages() ([]kubernetes.ImageInNamespace, error) {
 	for _, a := range assets {
 		for _, asset := range a.Assets {
 			for _, version := range asset.Versions {
-				fullImage := asset.Name + ":" + version
+				fullImage := asset.AssetExternalEntityID + ":" + version
 				result = append(result, kubernetes.ImageInNamespace{
-					Namespace: a.ProjectName,
+					Namespace: a.ProjectExternalEntityID,
 					Image: &libk8s.RegistryImage{
 						ImageID: fullImage,
 						Image:   fullImage,
@@ -99,11 +99,11 @@ func (g *DevGuardTarget) ProcessSbom(ctx *TargetContext) error {
 	}
 
 	payload := DevGuardRequest{
-		Verb:         "update",
-		ProjectName:  ctx.Pod.PodNamespace,
-		AssetName:    assetName,
-		AssetVersion: version,
-		Sbom:         json.RawMessage(ctx.Sbom),
+		Verb:                    "update",
+		ProjectExternalEntityID: ctx.Pod.PodNamespace,
+		AssetExternalEntityID:   assetName,
+		AssetVersion:            version,
+		Sbom:                    json.RawMessage(ctx.Sbom),
 	}
 
 	jsonBody, err := json.Marshal(payload)
@@ -141,10 +141,10 @@ func (g *DevGuardTarget) Remove(images []kubernetes.ImageInNamespace) error {
 			name, version := getRepoWithVersion(img.Image)
 
 			payload := DevGuardRequest{
-				Verb:         "delete",
-				ProjectName:  img.Namespace,
-				AssetName:    name,
-				AssetVersion: version,
+				Verb:                    "delete",
+				ProjectExternalEntityID: img.Namespace,
+				AssetExternalEntityID:   name,
+				AssetVersion:            version,
 			}
 
 			jsonBody, err := json.Marshal(payload)
