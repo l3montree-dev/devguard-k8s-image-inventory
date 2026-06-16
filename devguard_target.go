@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"strings"
@@ -59,6 +60,10 @@ func (g *DevGuardTarget) LoadImages() ([]kubernetes.ImageInNamespace, error) {
 		return nil, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("failed to load images from DevGuard: " + resp.Status)
+	}
 
 	var assets []projectAssetsResponse
 	if err := json.NewDecoder(resp.Body).Decode(&assets); err != nil {
