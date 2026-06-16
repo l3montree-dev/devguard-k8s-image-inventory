@@ -1,6 +1,6 @@
 module github.com/l3montree-dev/devguard-operator
 
-go 1.23.4
+go 1.26.3
 
 require (
 	github.com/ckotzbauer/libk8soci v0.0.0-20240810135526-c1ac5a827c6b
