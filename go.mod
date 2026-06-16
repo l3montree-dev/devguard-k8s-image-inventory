@@ -5,7 +5,6 @@ go 1.26.3
 require (
 	github.com/ckotzbauer/libk8soci v0.0.0-20240810135526-c1ac5a827c6b
 	github.com/ckotzbauer/libstandard v0.0.0-20240714072944-bb20d4a8e76a
-	github.com/gosimple/slug v1.14.0
 	github.com/l3montree-dev/devguard v0.5.15
 	github.com/lmittmann/tint v1.0.5
 	github.com/novln/docker-parser v1.0.0
@@ -52,7 +51,6 @@ require (
 	github.com/golang-sql/sqlexp v0.1.0 // indirect
 	github.com/google/gnostic-models v0.6.8 // indirect
 	github.com/google/uuid v1.6.0 // indirect
-	github.com/gosimple/unidecode v1.0.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/iancoleman/strcase v0.3.0 // indirect
