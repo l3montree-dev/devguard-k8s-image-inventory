@@ -16,9 +16,9 @@ import (
 
 type DevGuardTarget struct {
 	projectURL string
-	token  string
-	tags   []string
-	client devguard.HTTPClient
+	token      string
+	tags       []string
+	client     devguard.HTTPClient
 }
 
 type DevGuardRequest struct {
@@ -39,12 +39,12 @@ type projectAssetsResponse struct {
 
 func NewDevGuardTarget(token, projectURL string, tags []string) *DevGuardTarget {
 	client := devguard.NewHTTPClient(token, projectURL)
-
+	projectURL = projectURL + "/dn/devguard-operator"
 	return &DevGuardTarget{
 		projectURL: projectURL,
-		token:  token,
-		tags:   tags,
-		client: client,
+		token:      token,
+		tags:       tags,
+		client:     client,
 	}
 }
 
@@ -105,9 +105,8 @@ func (g *DevGuardTarget) ProcessSbom(ctx *TargetContext) error {
 	if err != nil {
 		return err
 	}
-	providerID := "devguard-operator"
-	url := g.projectURL + "/dn/:" + providerID
-	req, err := http.NewRequest("POST", url, strings.NewReader(string(jsonBody)))
+
+	req, err := http.NewRequest("POST", g.projectURL, strings.NewReader(string(jsonBody)))
 	if err != nil {
 		return err
 	}
