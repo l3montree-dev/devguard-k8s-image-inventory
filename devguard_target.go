@@ -25,22 +25,26 @@ type DevGuardTarget struct {
 type DevGuardRequest struct {
 	Verb                    string          `json:"verb"`
 	ProjectExternalEntityID string          `json:"projectExternalEntityId"`
+	ProjectName             string          `json:"projectName"`
 	AssetExternalEntityID   string          `json:"assetExternalEntityId"`
+	AssetName               string          `json:"assetName"`
 	AssetVersion            string          `json:"assetVersion"`
 	Sbom                    json.RawMessage `json:"sbom,omitempty"`
 }
 
 type projectAssetsResponse struct {
 	ProjectExternalEntityID string `json:"projectExternalEntityId"`
+	ProjectName             string `json:"projectName"`
 	Assets                  []struct {
 		AssetExternalEntityID string   `json:"assetExternalEntityId"`
+		AssetName             string   `json:"assetName"`
 		Versions              []string `json:"versions"`
 	} `json:"assets"`
 }
 
 func NewDevGuardTarget(token, projectURL string, tags []string) *DevGuardTarget {
 	client := devguard.NewHTTPClient(token, projectURL)
-	projectURL = projectURL + "/dn/devguard-operator"
+	projectURL = projectURL + "/dn/opencode"
 	return &DevGuardTarget{
 		projectURL: projectURL,
 		token:      token,
@@ -101,7 +105,9 @@ func (g *DevGuardTarget) ProcessSbom(ctx *TargetContext) error {
 	payload := DevGuardRequest{
 		Verb:                    "update",
 		ProjectExternalEntityID: ctx.Pod.PodNamespace,
+		ProjectName:             ctx.Pod.PodNamespace,
 		AssetExternalEntityID:   assetName,
+		AssetName:               assetName,
 		AssetVersion:            version,
 		Sbom:                    json.RawMessage(ctx.Sbom),
 	}
@@ -143,7 +149,9 @@ func (g *DevGuardTarget) Remove(images []kubernetes.ImageInNamespace) error {
 			payload := DevGuardRequest{
 				Verb:                    "delete",
 				ProjectExternalEntityID: img.Namespace,
+				ProjectName:             img.Namespace,
 				AssetExternalEntityID:   name,
+				AssetName:               name,
 				AssetVersion:            version,
 			}
 
