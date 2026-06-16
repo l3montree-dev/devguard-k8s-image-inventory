@@ -44,7 +44,7 @@ type projectAssetsResponse struct {
 
 func NewDevGuardTarget(token, projectURL string, tags []string) *DevGuardTarget {
 	client := devguard.NewHTTPClient(token, projectURL)
-	projectURL = projectURL + "/dn/opencode"
+	projectURL = projectURL + "/dn/devguard-operator"
 	return &DevGuardTarget{
 		projectURL: projectURL,
 		token:      token,
