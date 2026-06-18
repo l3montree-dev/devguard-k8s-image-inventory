@@ -9,7 +9,7 @@ import (
 type TargetContext struct {
 	Image     *oci.RegistryImage
 	Container *libk8s.ContainerInfo
-	Pod       *libk8s.PodInfo
+	Pod       *kubernetes.PodInfo
 	Sbom      string
 }
 
@@ -19,6 +19,6 @@ type Target interface {
 	Remove(images []kubernetes.ImageInNamespace) error
 }
 
-func NewContext(sbom string, image *oci.RegistryImage, container *libk8s.ContainerInfo, pod *libk8s.PodInfo) *TargetContext {
+func NewContext(sbom string, image *oci.RegistryImage, container *libk8s.ContainerInfo, pod *kubernetes.PodInfo) *TargetContext {
 	return &TargetContext{image, container, pod, sbom}
 }

@@ -58,7 +58,10 @@ func (t Trivy) downloadImageToLocalFilesystem(img *oci.RegistryImage) (string, e
 
 	ctx := context.Background()
 
-	repoName, tag := getRepoWithVersion(img)
+	repoName, tag, _, err := getRepoWithVersion(img)
+	if err != nil {
+		return "", errors.Wrap(err, "could not parse image reference")
+	}
 	repo, err := remote.NewRepository(repoName)
 	if err != nil {
 		return "", errors.Wrap(err, "could not create remote repository")

@@ -36,18 +36,18 @@ func (p *Processor) ListenForPods() {
 		UpdateFunc: func(old, new interface{}) {
 			oldPod := old.(*corev1.Pod)
 			newPod := new.(*corev1.Pod)
-			oldInfo := p.K8s.Client.ExtractPodInfos(*oldPod)
-			newInfo := p.K8s.Client.ExtractPodInfos(*newPod)
+			oldInfo := p.K8s.ExtractPodInfos(*oldPod)
+			newInfo := p.K8s.ExtractPodInfos(*newPod)
 
 			var removedContainers []*libk8s.ContainerInfo
-			newInfo.Containers, removedContainers = getChangedContainers(oldInfo, newInfo)
+			newInfo.Containers, removedContainers = getChangedContainers(oldInfo.PodInfo, newInfo.PodInfo)
 			p.scanPod(newInfo)
 
 			p.cleanupImagesIfNeeded(newInfo.PodNamespace, removedContainers, informer.GetStore().List())
 		},
 		DeleteFunc: func(obj interface{}) {
 			pod := obj.(*corev1.Pod)
-			info := p.K8s.Client.ExtractPodInfos(*pod)
+			info := p.K8s.ExtractPodInfos(*pod)
 
 			p.cleanupImagesIfNeeded(info.PodNamespace, info.Containers, informer.GetStore().List())
 		},
@@ -61,7 +61,7 @@ func (p *Processor) ListenForPods() {
 	p.runInformerAsync(informer)
 }
 
-func (p *Processor) ProcessAllPods(pods []libk8s.PodInfo, allImages []kubernetes.ImageInNamespace) {
+func (p *Processor) ProcessAllPods(pods []kubernetes.PodInfo, allImages []kubernetes.ImageInNamespace) {
 	p.executeScans(pods, allImages)
 }
 
@@ -74,9 +74,9 @@ func getImageName(img *oci.RegistryImage) string {
 	return img.Image
 }
 
-func (p *Processor) scanPod(pod libk8s.PodInfo) {
+func (p *Processor) scanPod(pod kubernetes.PodInfo) {
 	errOccurred := false
-	p.K8s.InjectPullSecrets(pod)
+	p.K8s.InjectPullSecrets(pod.PodInfo)
 
 	for _, container := range pod.Containers {
 		alreadyScanned := p.imageMap[pod.PodNamespace+"/"+getImageName(container.Image)]
@@ -99,7 +99,7 @@ func (p *Processor) scanPod(pod libk8s.PodInfo) {
 	}
 
 	if !errOccurred && len(pod.Containers) > 0 {
-		p.K8s.UpdatePodAnnotation(pod)
+		p.K8s.UpdatePodAnnotation(pod.PodInfo)
 	}
 }
 
@@ -112,7 +112,7 @@ func initTargets() []Target {
 	return targets
 }
 
-func (p *Processor) executeScans(pods []libk8s.PodInfo, allImages []kubernetes.ImageInNamespace) {
+func (p *Processor) executeScans(pods []kubernetes.PodInfo, allImages []kubernetes.ImageInNamespace) {
 	for _, pod := range pods {
 		p.scanPod(pod)
 	}
@@ -127,7 +127,7 @@ func (p *Processor) executeScans(pods []libk8s.PodInfo, allImages []kubernetes.I
 
 		removableImages := make([]kubernetes.ImageInNamespace, 0)
 		for _, t := range targetImages {
-			slog.Debug("Checking image for removal", "image", t.String())
+			//	slog.Debug("Checking image for removal", "image", t.String())
 			if !containsImage(allImages, t) {
 				removableImages = append(removableImages, t)
 				delete(p.imageMap, t.String())
@@ -167,6 +167,9 @@ func containsImage(images []kubernetes.ImageInNamespace, target kubernetes.Image
 	}
 
 	for _, candidate := range images {
+		if candidate.Namespace != target.Namespace || candidate.ContainerName != target.ContainerName || (candidate.ControllerName != nil && target.ControllerName != nil && *candidate.ControllerName != *target.ControllerName) {
+			continue
+		}
 		candidateParsed, err := parser.Parse(candidate.Image.Image)
 		if err != nil {
 			continue
@@ -196,7 +199,7 @@ func (p *Processor) cleanupImagesIfNeeded(namespace string, removedContainers []
 		found := false
 		for _, po := range allPods {
 			pod := po.(*corev1.Pod)
-			info := p.K8s.Client.ExtractPodInfos(*pod)
+			info := p.K8s.ExtractPodInfos(*pod)
 			found = found || containsContainerImage(info.Containers, c.Image.ImageID)
 		}
 
@@ -251,7 +254,7 @@ func (p *Processor) runInformerAsync(informer cache.SharedIndexInformer) {
 
 		slog.Info("Finished cache sync")
 		pods := informer.GetStore().List()
-		missingPods := make([]libk8s.PodInfo, 0)
+		missingPods := make([]kubernetes.PodInfo, 0)
 		allImages := make([]kubernetes.ImageInNamespace, 0)
 
 		for _, t := range p.Targets {
@@ -265,13 +268,15 @@ func (p *Processor) runInformerAsync(informer cache.SharedIndexInformer) {
 			for _, po := range pods {
 				pod := po.(*corev1.Pod)
 				slog.Debug("Pod found", "pod", pod.Name, "namespace", pod.Namespace)
-				info := p.K8s.Client.ExtractPodInfos(*pod)
+				info := p.K8s.ExtractPodInfos(*pod)
 				for _, c := range info.Containers {
-					allImages = append(allImages, kubernetes.ImageInNamespace{Namespace: info.PodNamespace, Image: c.Image})
+					allImages = append(allImages, kubernetes.ImageInNamespace{Namespace: info.PodNamespace, Image: c.Image, ContainerName: c.Name, ControllerName: &info.OwnerReferences.Name})
 
 					if !containsImage(targetImages, kubernetes.ImageInNamespace{
-						Image:     c.Image,
-						Namespace: info.PodNamespace,
+						Image:          c.Image,
+						Namespace:      info.PodNamespace,
+						ContainerName:  c.Name,
+						ControllerName: &info.OwnerReferences.Name,
 					}) {
 						missingPods = append(missingPods, info)
 						slog.Debug("Pod needs to be analyzed", "pod", info.PodName, "namespace", info.PodNamespace)
