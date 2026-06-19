@@ -43,13 +43,13 @@ func (p *Processor) ListenForPods() {
 			newInfo.Containers, removedContainers = getChangedContainers(oldInfo.PodInfo, newInfo.PodInfo)
 			p.scanPod(newInfo)
 
-			p.cleanupImagesIfNeeded(newInfo.PodNamespace, removedContainers, informer.GetStore().List())
+			p.cleanupImagesIfNeeded(newInfo, removedContainers, informer.GetStore().List())
 		},
 		DeleteFunc: func(obj interface{}) {
 			pod := obj.(*corev1.Pod)
 			info := p.K8s.ExtractPodInfos(*pod)
 
-			p.cleanupImagesIfNeeded(info.PodNamespace, info.Containers, informer.GetStore().List())
+			p.cleanupImagesIfNeeded(info, info.Containers, informer.GetStore().List())
 		},
 	})
 
@@ -192,7 +192,7 @@ func containsContainerImage(containers []*libk8s.ContainerInfo, image string) bo
 	return false
 }
 
-func (p *Processor) cleanupImagesIfNeeded(namespace string, removedContainers []*libk8s.ContainerInfo, allPods []interface{}) {
+func (p *Processor) cleanupImagesIfNeeded(info kubernetes.PodInfo, removedContainers []*libk8s.ContainerInfo, allPods []interface{}) {
 	images := make([]kubernetes.ImageInNamespace, 0)
 
 	for _, c := range removedContainers {
@@ -204,7 +204,7 @@ func (p *Processor) cleanupImagesIfNeeded(namespace string, removedContainers []
 		}
 
 		if !found {
-			imageWithNamespace := kubernetes.ImageInNamespace{Namespace: namespace, Image: c.Image}
+			imageWithNamespace := kubernetes.ImageInNamespace{Namespace: info.PodNamespace, Image: c.Image, ContainerName: c.Name, ControllerName: &info.OwnerReferences.Name}
 			images = append(images, imageWithNamespace)
 			delete(p.imageMap, imageWithNamespace.String())
 
