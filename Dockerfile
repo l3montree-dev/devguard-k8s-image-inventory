@@ -12,7 +12,7 @@ COPY . .
 # build the scanner
 RUN CGO_ENABLED=0 go build -buildvcs=false -o devguard-k8s-image-inventory .
 
-FROM registry.opencode.de/oci-community/images/zendis/static@sha256:41517aab6bbb1dfae9334e7e46f4b83070765471f55102f5dbcd8c720685e588
+FROM ghcr.io/l3montree-dev/static@sha256:41517aab6bbb1dfae9334e7e46f4b83070765471f55102f5dbcd8c720685e588
 
 COPY --from=golang-builder /app/devguard-k8s-image-inventory /usr/local/bin/devguard-k8s-image-inventory
 COPY --from=golang-builder /usr/local/bin/trivy /usr/local/bin/trivy
