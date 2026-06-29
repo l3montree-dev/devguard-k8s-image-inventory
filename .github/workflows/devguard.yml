@@ -11,27 +11,56 @@ permissions:
 
 jobs:
     test:
+        name: tests
         runs-on: ubuntu-latest
+        permissions:
+          contents: read
         steps:
           - uses: actions/checkout@v4
-          - uses: actions/setup-go@v5
             with:
-                go-version-file: go.mod
-          - run: go test ./...
+              persist-credentials: false
+          - uses: cachix/install-nix-action@v31
+            with:
+              install_url: https://releases.nixos.org/nix/nix-2.34.4/install
+              extra_nix_config: |
+                experimental-features = nix-command flakes
+          - name: Run tests
+            run: nix develop . --command bash -c "go test ./..."
 
     call-devsecops:
-        uses: l3montree-dev/devguard-ci-components/.github/workflows/full.yml@main
+        uses: l3montree-dev/devguard-ci-components/.github/workflows/code-scanning.yml@main
+        permissions:
+          contents: read
+          security-events: write
         with:
             devguard-asset-name: "l3montree-cybersecurity/projects/devguard/assets/devguard-k8s-image-inventory"
             devguard-api-url: "https://api.main.devguard.org"
             devguard-web-ui: "https://main.devguard.org"
         secrets:
             devguard-token: "${{ secrets.DEVGUARD_TOKEN }}"
-            build-args: "--context=. --dockerfile=Dockerfile --build-arg=VERSION=${{ github.ref_type == 'tag' && github.ref_name || github.sha }} --build-arg=COMMIT=${{ github.sha }} --build-arg=DATE=${{ github.event.head_commit.timestamp }}"
+
+    image-pipeline:
+        if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/') || github.ref == 'refs/heads/main'
+        needs: [test]
+        uses: l3montree-dev/devguard-ci-components/.github/workflows/full-nix.yml@main
+        permissions:
+          contents: read
+          packages: write
+          security-events: write
+        with:
+          nix-target-amd64: devguard-k8s-image-inventory-amd64
+          nix-target-arm64: devguard-k8s-image-inventory-arm64
+          nix-version: '2.34.4'
+          image-name: ghcr.io/${{ github.repository }}
+          devguard-asset-name: l3montree-cybersecurity/projects/devguard/assets/devguard-k8s-image-inventory
+          devguard-api-url: https://api.main.devguard.org
+          devguard-web-ui: https://main.devguard.org
+        secrets:
+          devguard-token: ${{ secrets.DEVGUARD_TOKEN }}
 
     release:
         if: startsWith(github.ref, 'refs/tags/')
-        needs: [test, call-devsecops]
+        needs: [test, image-pipeline]
         uses: l3montree-dev/devguard-ci-components/.github/workflows/release.yml@main
         permissions:
             contents: write
@@ -69,5 +98,5 @@ jobs:
 
                 ---
 
-                📖 [Configuration reference](https://github.com/l3montree-dev/devguard-k8s-image-inventory#readme)
+                📖 [Full documentation](https://docs.devguard.org/how-to-guides/integrations/k8s-image-inventory/)
                 🐛 [Report an issue](https://github.com/l3montree-dev/devguard-k8s-image-inventory/issues)
