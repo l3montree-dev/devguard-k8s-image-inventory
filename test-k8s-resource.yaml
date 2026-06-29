@@ -17,8 +17,62 @@ spec:
     metadata:
       labels:
         app: busybox
+      annotations:
+        seccomp.security.alpha.kubernetes.io/pod: runtime/default
     spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 53111
+        seccompProfile:
+          type: RuntimeDefault
       containers:
       - name: busybox
-        image: ubuntu:22.04
+        image: ubuntu@sha256:4f838adc7181d9039ac795a7d0aba05a9bd9ecd480d294483169c5def983b64d
+        imagePullPolicy: Always
         command: ["sh", "-c", "while true; do echo 'Hello from BusyBox!'; sleep 5; done"]
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsNonRoot: true
+          runAsUser: 53111
+          privileged: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        resources:
+          requests:
+            cpu: 100m
+            memory: 64Mi
+          limits:
+            cpu: 200m
+            memory: 128Mi
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - echo healthy
+          initialDelaySeconds: 5
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - echo ready
+          initialDelaySeconds: 5
+          periodSeconds: 10
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: busybox-deny-all
+  namespace: busybox
+spec:
+  podSelector:
+    matchLabels:
+      app: busybox
+  policyTypes:
+  - Ingress
+  - Egress

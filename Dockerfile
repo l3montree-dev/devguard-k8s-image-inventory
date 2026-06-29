@@ -21,4 +21,6 @@ WORKDIR /usr/local/bin
 
 COPY trivy.yaml /usr/local/bin/trivy.yaml
 
+USER 53111
+# checkov:skip=CKV_DOCKER_2:No curl or wget available in distroless image to implement HEALTHCHECK
 CMD ["/usr/local/bin/devguard-k8s-image-inventory"]

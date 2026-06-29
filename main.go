@@ -46,7 +46,17 @@ func newRootCmd() *cobra.Command {
 		Short: "An operator for cataloguing all k8s-cluster-images to devguard.",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			OperatorConfig = &Config{}
-			return libstandard.DefaultInitializer(OperatorConfig, cmd, "devguard-k8s-image-inventory")
+			if err := libstandard.DefaultInitializer(OperatorConfig, cmd, "devguard-k8s-image-inventory"); err != nil {
+				return err
+			}
+			if OperatorConfig.DevGuardTokenFile != "" {
+				data, err := os.ReadFile(OperatorConfig.DevGuardTokenFile)
+				if err != nil {
+					return fmt.Errorf("reading token file: %w", err)
+				}
+				OperatorConfig.DevGuardToken = string(data)
+			}
+			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			printVersion()
@@ -84,7 +94,6 @@ func newRootCmd() *cobra.Command {
 	rootCmd.PersistentFlags().StringSlice(ConfigKeyRegistryProxy, []string{}, "Registry-Proxy")
 	rootCmd.PersistentFlags().Int64(ConfigKeyJobTimeout, 60*60, "Job-Timeout")
 
-	rootCmd.PersistentFlags().String(ConfigDevGuardToken, "", "DevGuard-Token")
 	rootCmd.PersistentFlags().String(ConfigDevGuardProjectURL, "", "DevGuard Project URL")
 
 	return rootCmd

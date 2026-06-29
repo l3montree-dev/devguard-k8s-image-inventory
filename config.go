@@ -10,9 +10,10 @@ type Config struct {
 	JobTimeout         int64    `yaml:"jobTimeout" env:"SBOM_JOB_TIMEOUT" flag:"jobTimeout"`
 	FallbackPullSecret string   `yaml:"fallbackPullSecret" env:"SBOM_FALLBACK_PULL_SECRET" flag:"fallbackPullSecret"`
 	RegistryProxies    []string `yaml:"registryProxy" env:"SBOM_REGISTRY_PROXY" flag:"registryProxy"`
-	Verbosity          string   `env:"SBOM_VERBOSITY" flag:"verbosity"`
+	Verbosity          string   `env:"SBOM_VERBOSITY" flag:"verbosity" yaml:"verbosity"`
 
-	DevGuardToken  string `yaml:"devGuardToken" env:"DEVGUARD_TOKEN" flag:"token"`
+	DevGuardToken      string
+	DevGuardTokenFile  string `yaml:"devGuardTokenFile" env:"DEVGUARD_TOKEN_FILE"`
 	DevGuardProjectURL string `yaml:"devGuardProjectURL" env:"DEVGUARD_PROJECT_URL" flag:"projectUrl"`
 }
 
@@ -27,7 +28,6 @@ var (
 	ConfigKeyFallbackPullSecret = "fallbackPullSecret"
 	ConfigKeyRegistryProxy      = "registryProxy"
 
-	ConfigDevGuardToken  = "token"
 	ConfigDevGuardProjectURL = "projectUrl"
 
 	OperatorConfig *Config

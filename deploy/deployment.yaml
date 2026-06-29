@@ -5,6 +5,11 @@ metadata:
     app.kubernetes.io/name: devguard-k8s-image-inventory
   name: devguard-k8s-image-inventory
   namespace: devguard
+  annotations:
+    checkov.io/skip1: "CKV_K8S_43=Image digest is resolved by the CI pipeline at deploy time"
+    checkov.io/skip2: "CKV_K8S_38=Operator requires SA token to access the Kubernetes API"
+    checkov.io/skip3: "CKV_K8S_15=imagePullPolicy is managed by the deployment pipeline"
+    checkov.io/skip4: "CKV2_K8S_6=NetworkPolicy is managed separately per cluster"
 spec:
   selector:
     matchLabels:
@@ -18,17 +23,14 @@ spec:
       - image: ghcr.io/l3montree-dev/devguard-k8s-image-inventory:main-amd64
         name: operator
         env:
-          - name: DEVGUARD_TOKEN
-            valueFrom:
-              secretKeyRef:
-                name: "devguard-k8s-image-inventory"
-                key: "devguard-token"
           - name: POD_NAMESPACE
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: DEVGUARD_PROJECT_URL
             value: "https://api.main.devguard.org/api/v1/organizations/l3montree-cybersecurity/projects/cluster/external"
+          - name: DEVGUARD_TOKEN_FILE
+            value: /etc/devguard/token
         ports:
         - containerPort: 8081
           name: http
@@ -37,10 +39,11 @@ spec:
           capabilities:
             drop:
             - ALL
+          allowPrivilegeEscalation: false
           privileged: false
           readOnlyRootFilesystem: true
           runAsNonRoot: true
-          runAsUser: 101
+          runAsUser: 53111
           seccompProfile:
             type: RuntimeDefault
         volumeMounts:
@@ -48,6 +51,9 @@ spec:
             name: work
           - mountPath: /tmp
             name: tmp
+          - mountPath: /etc/devguard
+            name: devguard-token
+            readOnly: true
         resources:
           limits:
             cpu: 500m
@@ -70,6 +76,13 @@ spec:
           emptyDir: {}
         - name: tmp
           emptyDir: {}
+        - name: devguard-token
+          secret:
+            secretName: devguard-k8s-image-inventory
+            items:
+              - key: devguard-token
+                path: token
+      automountServiceAccountToken: true
       securityContext:
-        fsGroup: 101
+        fsGroup: 53111
       serviceAccountName: devguard-k8s-image-inventory
