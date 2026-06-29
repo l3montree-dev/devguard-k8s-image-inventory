@@ -22,8 +22,8 @@ func StartDaemon(cronTime string, appVersion string) {
 	cr := libstandard.Unescape(cronTime)
 	slog.Debug("settings cron", "cronTime", cronTime)
 
-	k8s := kubernetes.NewClient(OperatorConfig.IgnoreAnnotations, OperatorConfig.FallbackPullSecret)
-	triv := NewTrivyScanner(libstandard.ToMap(OperatorConfig.RegistryProxies), appVersion)
+	k8s := kubernetes.NewClient(ProvidedConfig.IgnoreAnnotations, ProvidedConfig.FallbackPullSecret)
+	triv := NewTrivyScanner(libstandard.ToMap(ProvidedConfig.RegistryProxies), appVersion)
 	processor := NewProcessor(k8s, triv)
 
 	cs := CronService{cron: cr, processor: processor}
@@ -63,7 +63,7 @@ func (c *CronService) runBackgroundService() {
 		t.LoadImages()
 	}
 
-	namespaceSelector := OperatorConfig.NamespaceLabelSelector
+	namespaceSelector := ProvidedConfig.NamespaceLabelSelector
 	namespaces, err := c.processor.K8s.Client.ListNamespaces(namespaceSelector)
 	if err != nil {
 		slog.Error("failed to list namespaces", "err", err)
@@ -73,7 +73,7 @@ func (c *CronService) runBackgroundService() {
 
 	slog.Debug("Discovered namespaces", "namespaces", namespaces)
 
-	pods, allImages := c.processor.K8s.LoadImageInfos(namespaces, OperatorConfig.PodLabelSelector)
+	pods, allImages := c.processor.K8s.LoadImageInfos(namespaces, ProvidedConfig.PodLabelSelector)
 	c.processor.ProcessAllPods(pods, allImages)
 
 	c.printNextExecution()

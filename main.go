@@ -43,29 +43,29 @@ var (
 func newRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
 		Use:   "devguard-k8s-image-inventory",
-		Short: "An operator for cataloguing all k8s-cluster-images to devguard.",
+		Short: "An agent for cataloguing all k8s-cluster-images to devguard.",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
-			OperatorConfig = &Config{}
-			if err := libstandard.DefaultInitializer(OperatorConfig, cmd, "devguard-k8s-image-inventory"); err != nil {
+			ProvidedConfig = &Config{}
+			if err := libstandard.DefaultInitializer(ProvidedConfig, cmd, "config"); err != nil {
 				return err
 			}
-			if OperatorConfig.DevGuardTokenFile != "" {
-				data, err := os.ReadFile(OperatorConfig.DevGuardTokenFile)
+			if ProvidedConfig.DevGuardTokenFile != "" {
+				data, err := os.ReadFile(ProvidedConfig.DevGuardTokenFile)
 				if err != nil {
 					return fmt.Errorf("reading token file: %w", err)
 				}
-				OperatorConfig.DevGuardToken = string(data)
+				ProvidedConfig.DevGuardToken = string(data)
 			}
 			return nil
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			printVersion()
 
-			if OperatorConfig.Cron != "" {
-				StartDaemon(OperatorConfig.Cron, Version)
+			if ProvidedConfig.Cron != "" {
+				StartDaemon(ProvidedConfig.Cron, Version)
 			} else {
-				k8s := kubernetes.NewClient(OperatorConfig.IgnoreAnnotations, OperatorConfig.FallbackPullSecret)
-				triv := NewTrivyScanner(libstandard.ToMap(OperatorConfig.RegistryProxies), Version)
+				k8s := kubernetes.NewClient(ProvidedConfig.IgnoreAnnotations, ProvidedConfig.FallbackPullSecret)
+				triv := NewTrivyScanner(libstandard.ToMap(ProvidedConfig.RegistryProxies), Version)
 				p := NewProcessor(k8s, triv)
 				p.ListenForPods()
 			}
@@ -95,7 +95,6 @@ func newRootCmd() *cobra.Command {
 	rootCmd.PersistentFlags().Int64(ConfigKeyJobTimeout, 60*60, "Job-Timeout")
 
 	rootCmd.PersistentFlags().String(ConfigDevGuardProjectURL, "", "DevGuard Project URL")
-	rootCmd.PersistentFlags().String(ConfigDevGuardProviderID, "devguard-k8s-image-inventory", "DevGuard Provider ID")
 
 	return rootCmd
 }

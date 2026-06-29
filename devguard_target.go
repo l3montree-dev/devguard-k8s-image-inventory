@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strings"
 	"sync"
 
@@ -16,10 +17,10 @@ import (
 )
 
 type DevGuardTarget struct {
-	projectURL string
-	token      string
-	tags       []string
-	client     *devguard.HTTPClient
+	projectPath string
+	token       string
+	tags        []string
+	client      *devguard.HTTPClient
 }
 
 type DevGuardRequest struct {
@@ -64,24 +65,29 @@ type projectAssetsResponse struct {
 	} `json:"assets"`
 }
 
-func NewDevGuardTarget(token, projectURL, providerID string, tags []string) *DevGuardTarget {
-	client, err := devguard.NewHTTPClient(token, projectURL)
+func NewDevGuardTarget(token, projectURL string, tags []string) *DevGuardTarget {
+	// get the base from the projectURL
+	u, err := url.Parse(projectURL)
+	if err != nil {
+		panic("Failed to parse DevGuard project URL: " + err.Error())
+	}
+
+	client, err := devguard.NewHTTPClient(token, u.Scheme+"://"+u.Host)
 
 	if err != nil {
 		panic("Failed to create DevGuard HTTP client: " + err.Error())
 	}
 
-	projectURL = projectURL + "/" + providerID
 	return &DevGuardTarget{
-		projectURL: projectURL,
-		token:      token,
-		tags:       tags,
-		client:     client,
+		projectPath: u.Path,
+		token:       token,
+		tags:        tags,
+		client:      client,
 	}
 }
 
 func (g *DevGuardTarget) LoadImages() ([]kubernetes.ImageInNamespace, error) {
-	req, err := http.NewRequest("GET", g.projectURL, nil)
+	req, err := http.NewRequest("GET", g.projectPath, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +234,7 @@ func (g *DevGuardTarget) post(payload DevGuardRequest) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("POST", g.projectURL, strings.NewReader(string(jsonBody)))
+	req, err := http.NewRequest("POST", g.projectPath, strings.NewReader(string(jsonBody)))
 	if err != nil {
 		return err
 	}

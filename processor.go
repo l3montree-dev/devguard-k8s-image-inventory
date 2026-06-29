@@ -32,7 +32,7 @@ func NewProcessor(k8s *kubernetes.KubeClient, triv *Trivy) *Processor {
 
 func (p *Processor) ListenForPods() {
 	var informer cache.SharedIndexInformer
-	informer, err := p.K8s.StartPodInformer(OperatorConfig.PodLabelSelector, cache.ResourceEventHandlerFuncs{
+	informer, err := p.K8s.StartPodInformer(ProvidedConfig.PodLabelSelector, cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(old, new any) {
 			oldPod := old.(*corev1.Pod)
 			newPod := new.(*corev1.Pod)
@@ -106,7 +106,11 @@ func (p *Processor) scanPod(pod kubernetes.PodInfo) {
 func initTargets() []Target {
 	targets := make([]Target, 0)
 
-	t := NewDevGuardTarget(OperatorConfig.DevGuardToken, OperatorConfig.DevGuardProjectURL, OperatorConfig.DevGuardProviderID, nil)
+	if ProvidedConfig.DevGuardToken == "" || ProvidedConfig.DevGuardProjectURL == "" {
+		panic("DevGuard token and project URL must be provided in the configuration.")
+	}
+
+	t := NewDevGuardTarget(ProvidedConfig.DevGuardToken, ProvidedConfig.DevGuardProjectURL, nil)
 	targets = append(targets, t)
 
 	return targets
