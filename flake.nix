@@ -26,13 +26,13 @@
           buildGoModule = nixpkgs-unstable.legacyPackages.aarch64-linux.buildGoModule;
         };
 
-        ociAmd64 = import ./nix/oci.nix { pkgs = targetPkgsAmd64; inherit self devguard; };
-        ociArm64 = import ./nix/oci.nix { pkgs = targetPkgsArm64; inherit self devguard; };
+        ociAmd64 = import ./nix/oci.nix { pkgs = targetPkgsAmd64; system = "x86_64-linux"; inherit self devguard; };
+        ociArm64 = import ./nix/oci.nix { pkgs = targetPkgsArm64; system = "aarch64-linux"; inherit self devguard; };
 
         binary = import ./nix/k8s-image-inventory.nix {
           buildGoModule = hostPkgs.buildGoModule;
           lib = hostPkgs.lib;
-          inherit self;
+          inherit self system;
         };
       in {
         packages = {

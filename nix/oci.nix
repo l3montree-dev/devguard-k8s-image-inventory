@@ -1,11 +1,11 @@
-{ pkgs, self, devguard }:
+{ pkgs, self, devguard, system }:
 let
   common = import ./common.nix { inherit self; };
 
   binary = import ./k8s-image-inventory.nix {
     buildGoModule = pkgs.buildGoModule;
     lib = pkgs.lib;
-    inherit self;
+    inherit self system;
   };
 
   trivyFromSource = pkgs.callPackage "${devguard}/nix/trivy.nix" { };
