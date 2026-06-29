@@ -15,7 +15,7 @@ buildGoModule {
     ];
   };
 
-  vendorHash = lib.fakeHash;
+  vendorHash = "sha256-LpSE4UMAEExUsAJJu4MvESXLATqn4OaGE5utxZuEgK8=";
 
   ldflags = [
     "-s"
