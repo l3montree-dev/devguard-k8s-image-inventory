@@ -3,6 +3,7 @@ name: DevGuard Workflow
 
 on:
   push:
+  workflow_dispatch:
  
 jobs:
     call-devsecops:
