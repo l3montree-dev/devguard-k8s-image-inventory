@@ -11,8 +11,10 @@ import (
 )
 
 type ImageInNamespace struct {
-	Namespace string
-	Image     *oci.RegistryImage
+	Namespace      string
+	ControllerName *string
+	ContainerName  string
+	Image          *oci.RegistryImage
 }
 
 func (i ImageInNamespace) String() string {

@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
+	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 
@@ -21,6 +22,11 @@ type KubeClient struct {
 	Client             *libk8s.KubeClient
 	ignoreAnnotations  bool
 	fallbackPullSecret []*oci.KubeCreds
+}
+
+type PodInfo struct {
+	libk8s.PodInfo
+	OwnerReferences meta.OwnerReference
 }
 
 var (
@@ -51,10 +57,11 @@ func (client *KubeClient) StartPodInformer(podLabelSelector string, handler cach
 
 		return &corev1.Pod{
 				ObjectMeta: meta.ObjectMeta{
-					Name:        pod.Name,
-					Namespace:   pod.Namespace,
-					Annotations: pod.Annotations,
-					Labels:      pod.Labels,
+					Name:            pod.Name,
+					Namespace:       pod.Namespace,
+					Annotations:     pod.Annotations,
+					Labels:          pod.Labels,
+					OwnerReferences: pod.OwnerReferences,
 				},
 				Status: corev1.PodStatus{
 					InitContainerStatuses:      pod.Status.InitContainerStatuses,
@@ -85,6 +92,21 @@ func loadFallbackPullSecret(client *libk8s.KubeClient, namespace, name string) [
 	return fallbackPullSecret
 }
 
+func (client *KubeClient) ExtractPodInfos(pod corev1.Pod) PodInfo {
+	owner, err := client.getOwner(pod.Namespace, pod.OwnerReferences)
+	if err != nil {
+		slog.Warn("failed to get owner reference for pod, proceeding without owner reference", "namespace", pod.Namespace, "pod", pod.Name, "err", err)
+		owner = v1.OwnerReference{
+			Kind: "Pod",
+			Name: pod.Name,
+		}
+	}
+	return PodInfo{
+		PodInfo:         client.Client.ExtractPodInfos(pod),
+		OwnerReferences: owner,
+	}
+}
+
 func (client *KubeClient) InjectPullSecrets(pod libk8s.PodInfo) {
 	for _, container := range pod.Containers {
 		container.Image.PullSecrets = client.Client.LoadSecrets(pod.PodNamespace, pod.PullSecretNames)
@@ -95,13 +117,53 @@ func (client *KubeClient) InjectPullSecrets(pod libk8s.PodInfo) {
 	}
 }
 
-func (client *KubeClient) LoadImageInfos(namespaces []corev1.Namespace, podLabelSelector string) ([]libk8s.PodInfo, []ImageInNamespace) {
-	podInfos := client.Client.LoadPodInfos(namespaces, podLabelSelector)
+func (client *KubeClient) getOwner(namespace string, refs []v1.OwnerReference) (v1.OwnerReference, error) {
+	for _, ref := range refs {
+		if ref.Controller != nil && *ref.Controller {
+
+			if ref.Kind == "Deployment" || ref.Kind == "StatefulSet" || ref.Kind == "DaemonSet" {
+				return ref, nil
+			}
+
+			switch ref.Kind {
+			case "ReplicaSet":
+				// list the owner of the replicaset
+				rs, err := client.Client.Client.AppsV1().ReplicaSets(namespace).Get(context.Background(), ref.Name, v1.GetOptions{})
+				if err != nil {
+					return v1.OwnerReference{}, err
+				}
+
+				return client.getOwner(namespace, rs.OwnerReferences)
+			default:
+				return ref, nil
+			}
+
+		} else {
+			continue
+		}
+
+	}
+	return v1.OwnerReference{}, fmt.Errorf("no controller owner reference found")
+}
+
+func (client *KubeClient) LoadImageInfos(namespaces []corev1.Namespace, podLabelSelector string) ([]PodInfo, []ImageInNamespace) {
+	podInfos := make([]PodInfo, 0)
 	allImages := make([]ImageInNamespace, 0)
 
-	for _, pod := range podInfos {
-		for _, container := range pod.Containers {
-			allImages = append(allImages, ImageInNamespace{Namespace: pod.PodNamespace, Image: container.Image})
+	for _, ns := range namespaces {
+		pods, err := client.Client.Client.CoreV1().Pods(ns.Name).List(context.Background(), meta.ListOptions{LabelSelector: podLabelSelector})
+		if err != nil {
+			slog.Warn("failed to list pods", "namespace", ns.Name, "err", err)
+			continue
+		}
+
+		for _, pod := range pods.Items {
+			info := client.ExtractPodInfos(pod)
+			podInfos = append(podInfos, info)
+			ownerName := info.OwnerReferences.Name
+			for _, container := range info.Containers {
+				allImages = append(allImages, ImageInNamespace{Namespace: pod.Namespace, Image: container.Image, ContainerName: container.Name, ControllerName: &ownerName})
+			}
 		}
 	}
 

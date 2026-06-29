@@ -58,7 +58,10 @@ func (t Trivy) downloadImageToLocalFilesystem(img *oci.RegistryImage) (string, e
 
 	ctx := context.Background()
 
-	repoName, tag := getRepoWithVersion(img)
+	repoName, tag, _, err := getRepoWithVersion(img)
+	if err != nil {
+		return "", errors.Wrap(err, "could not parse image reference")
+	}
 	repo, err := remote.NewRepository(repoName)
 	if err != nil {
 		return "", errors.Wrap(err, "could not create remote repository")
@@ -124,6 +127,7 @@ func (t *Trivy) ExecuteTrivy(img *oci.RegistryImage) (string, error) {
 		"--format", "cyclonedx",
 		"--output", sbomFile.Name(),
 		"--input", tmpDir,
+		"--cache-dir", "/tmp/.cache/trivy",
 		"-c", "trivy.yaml",
 	)
 
