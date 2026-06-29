@@ -26,4 +26,48 @@ jobs:
             devguard-api-url: "https://api.main.devguard.org"
             devguard-web-ui: "https://main.devguard.org"
         secrets:
-            devguard-token: "${{ secrets.DEVGUARD_TOKEN }}" 
+            devguard-token: "${{ secrets.DEVGUARD_TOKEN }}"
+            build-args: "--context=. --dockerfile=Dockerfile --build-arg=VERSION=${{ github.ref_type == 'tag' && github.ref_name || github.sha }} --build-arg=COMMIT=${{ github.sha }} --build-arg=DATE=${{ github.event.head_commit.timestamp }}"
+
+    release:
+        if: startsWith(github.ref, 'refs/tags/')
+        needs: [test, call-devsecops]
+        uses: l3montree-dev/devguard-ci-components/.github/workflows/release.yml@main
+        permissions:
+            contents: write
+        with:
+            release-tag: ${{ github.ref_name }}
+            release-name: "devguard-k8s-image-inventory ${{ github.ref_name }}"
+            prerelease: ${{ contains(github.ref_name, '-rc') || contains(github.ref_name, '-alpha') || contains(github.ref_name, '-beta') }}
+            release-description: |
+                # devguard-k8s-image-inventory ${{ github.ref_name }}
+
+                A tool that continuously scans all container images running in your Kubernetes cluster and reports them to [DevGuard](https://main.devguard.org). It generates an SBOM for each image using Trivy, uploads it to DevGuard organized by namespace and workload, and automatically removes entries when images are no longer running.
+
+                ## Installation
+
+                **1. Create the token secret**
+                ```bash
+                kubectl create namespace devguard
+
+                kubectl create secret generic devguard-k8s-image-inventory \
+                  --namespace devguard \
+                  --from-literal=devguard-token=<your-devguard-token>
+                ```
+
+                **2. Set your project URL in `deployment.yaml`, then apply**
+                ```bash
+                kubectl apply -f https://github.com/l3montree-dev/devguard-k8s-image-inventory/releases/download/${{ github.ref_name }}/rbac.yaml
+                kubectl apply -f https://github.com/l3montree-dev/devguard-k8s-image-inventory/releases/download/${{ github.ref_name }}/deployment.yaml
+                ```
+
+                ## Container image
+
+                ```bash
+                docker pull ghcr.io/l3montree-dev/devguard-k8s-image-inventory:${{ github.ref_name }}
+                ```
+
+                ---
+
+                📖 [Configuration reference](https://github.com/l3montree-dev/devguard-k8s-image-inventory#readme)
+                🐛 [Report an issue](https://github.com/l3montree-dev/devguard-k8s-image-inventory/issues)

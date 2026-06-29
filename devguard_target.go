@@ -19,7 +19,7 @@ type DevGuardTarget struct {
 	projectURL string
 	token      string
 	tags       []string
-	client     devguard.HTTPClient
+	client     *devguard.HTTPClient
 }
 
 type DevGuardRequest struct {
@@ -64,9 +64,14 @@ type projectAssetsResponse struct {
 	} `json:"assets"`
 }
 
-func NewDevGuardTarget(token, projectURL string, tags []string) *DevGuardTarget {
-	client := devguard.NewHTTPClient(token, projectURL)
-	projectURL = projectURL + "/dn/devguard-k8s-image-inventory"
+func NewDevGuardTarget(token, projectURL, providerID string, tags []string) *DevGuardTarget {
+	client, err := devguard.NewHTTPClient(token, projectURL)
+
+	if err != nil {
+		panic("Failed to create DevGuard HTTP client: " + err.Error())
+	}
+
+	projectURL = projectURL + "/" + providerID
 	return &DevGuardTarget{
 		projectURL: projectURL,
 		token:      token,

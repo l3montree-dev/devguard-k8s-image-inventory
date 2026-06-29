@@ -1,0 +1,36 @@
+# devguard-k8s-image-inventory configuration
+# Pass the path to this file via --config=config.yaml or DEVGUARD_K8S_IMAGE_INVENTORY_CONFIG
+
+# Path to a file containing the DevGuard API token.
+# In Kubernetes this is typically a secret volume mount.
+devGuardTokenFile: /etc/devguard/token
+
+# DevGuard project URL (required)
+devGuardProjectURL: https://api.main.devguard.org/api/v1/organizations/<org>/projects/<project>/external
+
+# Cron schedule for periodic scanning (e.g. every hour).
+# When empty, real-time mode is used: a pod informer triggers scanning immediately on pod changes.
+# cron: "0 * * * *"
+
+# Kubernetes label selector to restrict which pods are scanned.
+# podLabelSelector: "app.kubernetes.io/managed-by=Helm"
+
+# Kubernetes label selector to restrict which namespaces are scanned.
+# namespaceLabelSelector: "environment=production"
+
+# When true, re-scans all images even if already processed.
+ignoreAnnotations: false
+
+# Fallback pull secret name (must be in the same namespace as this tool)
+# used when no image pull secret can be found for a pod.
+# fallbackPullSecret: devguard-pull-secret
+
+# Registry proxy mappings. Redirect pulls from one registry to another.
+# registryProxy:
+#   - docker.io=my-mirror.example.com
+
+# Maximum seconds a scan job may run before being cancelled.
+jobTimeout: 3600
+
+# Log level: debug, info, warn, error
+verbosity: info

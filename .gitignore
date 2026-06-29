@@ -27,3 +27,5 @@ dist
 work
 /auth
 devguard-k8s-image-inventory.yaml
+config.yaml
+secrets

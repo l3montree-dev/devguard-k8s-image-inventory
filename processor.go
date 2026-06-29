@@ -106,7 +106,7 @@ func (p *Processor) scanPod(pod kubernetes.PodInfo) {
 func initTargets() []Target {
 	targets := make([]Target, 0)
 
-	t := NewDevGuardTarget(OperatorConfig.DevGuardToken, OperatorConfig.DevGuardProjectURL, nil)
+	t := NewDevGuardTarget(OperatorConfig.DevGuardToken, OperatorConfig.DevGuardProjectURL, OperatorConfig.DevGuardProviderID, nil)
 	targets = append(targets, t)
 
 	return targets

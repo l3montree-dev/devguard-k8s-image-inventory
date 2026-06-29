@@ -95,6 +95,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.PersistentFlags().Int64(ConfigKeyJobTimeout, 60*60, "Job-Timeout")
 
 	rootCmd.PersistentFlags().String(ConfigDevGuardProjectURL, "", "DevGuard Project URL")
+	rootCmd.PersistentFlags().String(ConfigDevGuardProviderID, "devguard-k8s-image-inventory", "DevGuard Provider ID")
 
 	return rootCmd
 }

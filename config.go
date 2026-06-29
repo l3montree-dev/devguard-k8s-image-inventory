@@ -15,6 +15,7 @@ type Config struct {
 	DevGuardToken      string
 	DevGuardTokenFile  string `yaml:"devGuardTokenFile" env:"DEVGUARD_TOKEN_FILE"`
 	DevGuardProjectURL string `yaml:"devGuardProjectURL" env:"DEVGUARD_PROJECT_URL" flag:"projectUrl"`
+	DevGuardProviderID string `yaml:"devGuardProviderId" env:"DEVGUARD_PROVIDER_ID" flag:"providerId"`
 }
 
 var (
@@ -29,6 +30,7 @@ var (
 	ConfigKeyRegistryProxy      = "registryProxy"
 
 	ConfigDevGuardProjectURL = "projectUrl"
+	ConfigDevGuardProviderID = "providerId"
 
 	OperatorConfig *Config
 )

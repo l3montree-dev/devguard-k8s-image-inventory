@@ -9,8 +9,14 @@ RUN curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/
 
 COPY . .
 
+ARG VERSION=dev
+ARG COMMIT=unknown
+ARG DATE=unknown
+
 # build the scanner
-RUN CGO_ENABLED=0 go build -buildvcs=false -o devguard-k8s-image-inventory .
+RUN CGO_ENABLED=0 go build -buildvcs=false \
+    -ldflags="-s -w -X main.Version=${VERSION} -X main.Commit=${COMMIT} -X main.Date=${DATE} -X main.BuiltBy=docker" \
+    -o devguard-k8s-image-inventory .
 
 FROM ghcr.io/l3montree-dev/static@sha256:41517aab6bbb1dfae9334e7e46f4b83070765471f55102f5dbcd8c720685e588
 
