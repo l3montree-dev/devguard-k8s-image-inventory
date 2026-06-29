@@ -33,7 +33,7 @@ func NewProcessor(k8s *kubernetes.KubeClient, triv *Trivy) *Processor {
 func (p *Processor) ListenForPods() {
 	var informer cache.SharedIndexInformer
 	informer, err := p.K8s.StartPodInformer(OperatorConfig.PodLabelSelector, cache.ResourceEventHandlerFuncs{
-		UpdateFunc: func(old, new interface{}) {
+		UpdateFunc: func(old, new any) {
 			oldPod := old.(*corev1.Pod)
 			newPod := new.(*corev1.Pod)
 			oldInfo := p.K8s.ExtractPodInfos(*oldPod)
@@ -45,7 +45,7 @@ func (p *Processor) ListenForPods() {
 
 			p.cleanupImagesIfNeeded(newInfo, removedContainers, informer.GetStore().List())
 		},
-		DeleteFunc: func(obj interface{}) {
+		DeleteFunc: func(obj any) {
 			pod := obj.(*corev1.Pod)
 			info := p.K8s.ExtractPodInfos(*pod)
 
@@ -192,7 +192,7 @@ func containsContainerImage(containers []*libk8s.ContainerInfo, image string) bo
 	return false
 }
 
-func (p *Processor) cleanupImagesIfNeeded(info kubernetes.PodInfo, removedContainers []*libk8s.ContainerInfo, allPods []interface{}) {
+func (p *Processor) cleanupImagesIfNeeded(info kubernetes.PodInfo, removedContainers []*libk8s.ContainerInfo, allPods []any) {
 	images := make([]kubernetes.ImageInNamespace, 0)
 
 	for _, c := range removedContainers {

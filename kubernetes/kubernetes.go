@@ -52,7 +52,7 @@ func (client *KubeClient) StartPodInformer(podLabelSelector string, handler cach
 		return nil, err
 	}
 
-	err = informer.SetTransform(func(x interface{}) (interface{}, error) {
+	err = informer.SetTransform(func(x any) (any, error) {
 		pod := x.(*corev1.Pod).DeepCopy()
 
 		return &corev1.Pod{
@@ -171,7 +171,7 @@ func (client *KubeClient) LoadImageInfos(namespaces []corev1.Namespace, podLabel
 }
 
 func (client *KubeClient) UpdatePodAnnotation(pod libk8s.PodInfo) {
-	for i := 0; i < updatePodMaxRetries; i++ {
+	for range updatePodMaxRetries {
 		err := client.updatePodAnnotation(pod)
 		if err == nil {
 			break
