@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/ckotzbauer/libstandard"
-	"github.com/l3montree-dev/devguard-operator/kubernetes"
+	"github.com/l3montree-dev/devguard-k8s-image-inventory/kubernetes"
 
 	"github.com/lmittmann/tint"
 	"github.com/spf13/cobra"
@@ -42,11 +42,11 @@ var (
 
 func newRootCmd() *cobra.Command {
 	rootCmd := &cobra.Command{
-		Use:   "devguard-operator",
+		Use:   "devguard-k8s-image-inventory",
 		Short: "An operator for cataloguing all k8s-cluster-images to devguard.",
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			OperatorConfig = &Config{}
-			return libstandard.DefaultInitializer(OperatorConfig, cmd, "devguard-operator")
+			return libstandard.DefaultInitializer(OperatorConfig, cmd, "devguard-k8s-image-inventory")
 		},
 		Run: func(cmd *cobra.Command, args []string) {
 			printVersion()
@@ -91,7 +91,7 @@ func newRootCmd() *cobra.Command {
 }
 
 func printVersion() {
-	slog.Info("starting devguard-operator", "version", Version, "commit", Commit, "date", Date, "builtBy", BuiltBy, "goVersion", runtime.Version())
+	slog.Info("starting devguard-k8s-image-inventory", "version", Version, "commit", Commit, "date", Date, "builtBy", BuiltBy, "goVersion", runtime.Version())
 }
 
 func health(w http.ResponseWriter, req *http.Request) {

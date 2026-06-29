@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/ckotzbauer/libk8soci/pkg/oci"
-	"github.com/l3montree-dev/devguard-operator/kubernetes"
+	"github.com/l3montree-dev/devguard-k8s-image-inventory/kubernetes"
 	"github.com/pkg/errors"
 	"oras.land/oras-go/v2"
 	orasOci "oras.land/oras-go/v2/content/oci"

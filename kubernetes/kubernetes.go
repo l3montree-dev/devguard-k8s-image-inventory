@@ -32,8 +32,8 @@ type PodInfo struct {
 var (
 	AnnotationTemplate = "devguard.org/%s"
 	/* #nosec */
-	jobSecretName       = "devguard-operator-job-config"
-	JobName             = "devguard-operator-job"
+	jobSecretName       = "devguard-k8s-image-inventory-job-config"
+	JobName             = "devguard-k8s-image-inventory-job"
 	updatePodMaxRetries = 3
 )
 

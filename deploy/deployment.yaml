@@ -2,33 +2,33 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app.kubernetes.io/name: devguard-operator
-  name: devguard-operator
+    app.kubernetes.io/name: devguard-k8s-image-inventory
+  name: devguard-k8s-image-inventory
   namespace: devguard
 spec:
   selector:
     matchLabels:
-      app.kubernetes.io/name: devguard-operator
+      app.kubernetes.io/name: devguard-k8s-image-inventory
   template:
     metadata:
       labels:
-        app.kubernetes.io/name: devguard-operator
+        app.kubernetes.io/name: devguard-k8s-image-inventory
     spec:
       containers:
-      - image: ghcr.io/l3montree-dev/devguard-operator:latest
+      - image: ghcr.io/l3montree-dev/devguard-k8s-image-inventory:main-amd64
         name: operator
         env:
           - name: DEVGUARD_TOKEN
             valueFrom:
               secretKeyRef:
-                name: "devguard-operator"
+                name: "devguard-k8s-image-inventory"
                 key: "devguard-token"
           - name: POD_NAMESPACE
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
           - name: DEVGUARD_PROJECT_URL
-            value: "https://api.main.devguard.org/api/v1/organizations/l3montree-cybersecurity/projects/cluster/dynamic-project"
+            value: "https://api.main.devguard.org/api/v1/organizations/l3montree-cybersecurity/projects/cluster/external"
         ports:
         - containerPort: 8081
           name: http
@@ -72,4 +72,4 @@ spec:
           emptyDir: {}
       securityContext:
         fsGroup: 101
-      serviceAccountName: devguard-operator
+      serviceAccountName: devguard-k8s-image-inventory

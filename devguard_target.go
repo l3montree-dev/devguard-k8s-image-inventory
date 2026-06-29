@@ -12,7 +12,7 @@ import (
 	parser "github.com/novln/docker-parser"
 
 	libk8s "github.com/ckotzbauer/libk8soci/pkg/oci"
-	"github.com/l3montree-dev/devguard-operator/kubernetes"
+	"github.com/l3montree-dev/devguard-k8s-image-inventory/kubernetes"
 )
 
 type DevGuardTarget struct {
@@ -66,7 +66,7 @@ type projectAssetsResponse struct {
 
 func NewDevGuardTarget(token, projectURL string, tags []string) *DevGuardTarget {
 	client := devguard.NewHTTPClient(token, projectURL)
-	projectURL = projectURL + "/dn/devguard-operator"
+	projectURL = projectURL + "/dn/devguard-k8s-image-inventory"
 	return &DevGuardTarget{
 		projectURL: projectURL,
 		token:      token,

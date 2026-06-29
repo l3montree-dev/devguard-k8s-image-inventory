@@ -26,4 +26,4 @@ dist
 
 work
 /auth
-devguard-operator.yaml
+devguard-k8s-image-inventory.yaml

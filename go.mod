@@ -1,4 +1,4 @@
-module github.com/l3montree-dev/devguard-operator
+module github.com/l3montree-dev/devguard-k8s-image-inventory
 
 go 1.26.3
 

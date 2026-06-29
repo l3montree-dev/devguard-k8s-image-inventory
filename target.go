@@ -3,7 +3,7 @@ package main
 import (
 	libk8s "github.com/ckotzbauer/libk8soci/pkg/kubernetes"
 	"github.com/ckotzbauer/libk8soci/pkg/oci"
-	"github.com/l3montree-dev/devguard-operator/kubernetes"
+	"github.com/l3montree-dev/devguard-k8s-image-inventory/kubernetes"
 )
 
 type TargetContext struct {
