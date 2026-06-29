@@ -96,6 +96,10 @@ func (g *DevGuardTarget) LoadImages() ([]kubernetes.ImageInNamespace, error) {
 		return nil, err
 	}
 
+	return flattenProjectAssets(assets), nil
+}
+
+func flattenProjectAssets(assets []projectAssetsResponse) []kubernetes.ImageInNamespace {
 	result := make([]kubernetes.ImageInNamespace, 0)
 	for _, a := range assets {
 		for _, asset := range a.Assets {
@@ -105,8 +109,8 @@ func (g *DevGuardTarget) LoadImages() ([]kubernetes.ImageInNamespace, error) {
 						Namespace:     a.ProjectExternalEntityID,
 						ContainerName: asset.AssetExternalEntityID,
 						Image: &libk8s.RegistryImage{
-							ImageID: g.buildImageNameFromArtifact(artifact),
-							Image:   g.buildImageNameFromArtifact(artifact),
+							ImageID: buildImageNameFromArtifact(artifact),
+							Image:   buildImageNameFromArtifact(artifact),
 						},
 					})
 				}
@@ -121,21 +125,19 @@ func (g *DevGuardTarget) LoadImages() ([]kubernetes.ImageInNamespace, error) {
 							ControllerName: &sp.SubProjectExternalEntityID,
 							ContainerName:  asset.AssetExternalEntityID,
 							Image: &libk8s.RegistryImage{
-								Image:   g.buildImageNameFromArtifact(artifact),
-								ImageID: g.buildImageNameFromArtifact(artifact),
+								Image:   buildImageNameFromArtifact(artifact),
+								ImageID: buildImageNameFromArtifact(artifact),
 							},
-						},
-						)
+						})
 					}
 				}
 			}
 		}
 	}
-
-	return result, nil
+	return result
 }
 
-func (g *DevGuardTarget) buildArtifactName(image *libk8s.RegistryImage) string {
+func buildArtifactName(image *libk8s.RegistryImage) string {
 	if strings.HasPrefix(image.Image, "pkg:oci/") {
 		return image.Image
 	}
@@ -148,10 +150,14 @@ func (g *DevGuardTarget) buildArtifactName(image *libk8s.RegistryImage) string {
 	if tag == "" {
 		tag = "latest"
 	}
-	return "pkg:oci/" + shortName + "@" + tag + "?repository_url=" + imageRepo
+	name := shortName
+	if idx := strings.LastIndex(shortName, "/"); idx >= 0 {
+		name = shortName[idx+1:]
+	}
+	return "pkg:oci/" + name + "@" + tag + "?repository_url=" + imageRepo
 }
 
-func (g *DevGuardTarget) buildImageNameFromArtifact(artifact string) string {
+func buildImageNameFromArtifact(artifact string) string {
 	if !strings.HasPrefix(artifact, "pkg:oci/") {
 		return artifact
 	}
@@ -168,13 +174,11 @@ func (g *DevGuardTarget) buildImageNameFromArtifact(artifact string) string {
 	return repo + ":" + digest
 }
 
-func (g *DevGuardTarget) ProcessSbom(ctx *TargetContext) error {
+func isWorkloadOwner(kind string) bool {
+	return kind == "Deployment" || kind == "DaemonSet" || kind == "StatefulSet"
+}
 
-	if ctx.Sbom == "" {
-		slog.Info("Empty SBOM - skip image", "image", ctx.Image.ImageID)
-		return nil
-	}
-
+func buildSbomPayload(ctx *TargetContext) DevGuardRequest {
 	payload := DevGuardRequest{
 		Verb:                    "update",
 		ProjectExternalEntityID: ctx.Pod.PodNamespace,
@@ -183,35 +187,60 @@ func (g *DevGuardTarget) ProcessSbom(ctx *TargetContext) error {
 		AssetExternalEntityID:   ctx.Container.Name,
 		AssetName:               ctx.Container.Name,
 		AssetVersionName:        "latest",
-		Artifact:                g.buildArtifactName(ctx.Image),
+		Artifact:                buildArtifactName(ctx.Image),
 		Sbom:                    json.RawMessage(ctx.Sbom),
 	}
-	if ctx.Pod.OwnerReferences.Kind == "Deployment" || ctx.Pod.OwnerReferences.Kind == "DaemonSet" || ctx.Pod.OwnerReferences.Kind == "StatefulSet" {
+	if isWorkloadOwner(ctx.Pod.OwnerReferences.Kind) {
 		payload.SubProjectExternalEntityID = ctx.Pod.OwnerReferences.Name
 		payload.SubProjectName = ctx.Pod.OwnerReferences.Name
 		payload.SubProjectDescription = ctx.Pod.OwnerReferences.Kind
-
 		payload.AssetDescription = "container"
 	} else {
 		payload.AssetDescription = "container controlled by " + ctx.Pod.OwnerReferences.Kind + " " + ctx.Pod.OwnerReferences.Name
 	}
+	return payload
+}
 
+func buildDeletePayload(img kubernetes.ImageInNamespace) DevGuardRequest {
+	controllerName := ""
+	if img.ControllerName != nil {
+		controllerName = *img.ControllerName
+	}
+	return DevGuardRequest{
+		Verb:                       "delete",
+		ProjectExternalEntityID:    img.Namespace,
+		ProjectName:                img.Namespace,
+		SubProjectExternalEntityID: controllerName,
+		AssetExternalEntityID:      img.ContainerName,
+		AssetName:                  img.ContainerName,
+		AssetVersionName:           "latest",
+		Artifact:                   buildArtifactName(img.Image),
+	}
+}
+
+func (g *DevGuardTarget) post(payload DevGuardRequest) error {
 	jsonBody, err := json.Marshal(payload)
 	if err != nil {
 		return err
 	}
-
 	req, err := http.NewRequest("POST", g.projectURL, strings.NewReader(string(jsonBody)))
 	if err != nil {
 		return err
 	}
-
 	req.Header.Set("Content-Type", "application/json")
+	_, err = g.client.Do(req)
+	return err
+}
+
+func (g *DevGuardTarget) ProcessSbom(ctx *TargetContext) error {
+	if ctx.Sbom == "" {
+		slog.Info("Empty SBOM - skip image", "image", ctx.Image.ImageID)
+		return nil
+	}
 
 	slog.Info("Sending SBOM to DevGuard", "Namespace", ctx.Pod.PodNamespace, "Container", ctx.Container.Name)
 
-	_, err = g.client.Do(req)
-	if err != nil {
+	if err := g.post(buildSbomPayload(ctx)); err != nil {
 		slog.Error("Could not upload SBOM", "err", err)
 		return err
 	}
@@ -227,45 +256,10 @@ func (g *DevGuardTarget) Remove(images []kubernetes.ImageInNamespace) error {
 		wg.Add(1)
 		go func(img kubernetes.ImageInNamespace) {
 			defer wg.Done()
-			slog.Debug("Removing asset from DevGuard", "Namespace", img.Namespace, "Container", img.ContainerName)
-
-			controllerName := ""
-			if img.ControllerName != nil {
-				controllerName = *img.ControllerName
-
-			}
-
-			payload := DevGuardRequest{
-				Verb:                       "delete",
-				ProjectExternalEntityID:    img.Namespace,
-				ProjectName:                img.Namespace,
-				SubProjectExternalEntityID: controllerName,
-				AssetExternalEntityID:      img.ContainerName,
-				AssetName:                  img.ContainerName,
-				AssetVersionName:           "latest",
-				Artifact:                   g.buildArtifactName(img.Image),
-			}
-
-			jsonBody, err := json.Marshal(payload)
-			if err != nil {
-				slog.Error("could not marshal delete request", "err", err)
-				return
-			}
-
-			req, err := http.NewRequest("POST", g.projectURL, strings.NewReader(string(jsonBody)))
-			if err != nil {
-				slog.Error("could not create delete request", "err", err)
-				return
-			}
-
-			req.Header.Set("Content-Type", "application/json")
-
 			slog.Info("Deleting asset", "Namespace", img.Namespace, "Container", img.ContainerName)
 
-			_, err = g.client.Do(req)
-			if err != nil {
+			if err := g.post(buildDeletePayload(img)); err != nil {
 				slog.Error("could not delete asset", "err", err)
-				return
 			}
 		}(img)
 	}
