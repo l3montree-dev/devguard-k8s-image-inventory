@@ -26,7 +26,7 @@ func TestBuildImageNameFromArtifact(t *testing.T) {
 	}{
 		"packageURL": {
 			input:    "pkg:oci/myimage@sha256:abc123?repository_url=ghcr.io/org",
-			expected: "ghcr.io/org:sha256:abc123",
+			expected: "ghcr.io/org@sha256:abc123",
 		},
 		"plainImageRef": {
 			input:    "ghcr.io/org/myimage:latest",
@@ -219,8 +219,8 @@ func TestFlattenProjectAssets(t *testing.T) {
 				Namespace:     "ns-a",
 				ContainerName: "container-a",
 				Image: &oci.RegistryImage{
-					Image:   "ghcr.io/org:sha256:abc",
-					ImageID: "ghcr.io/org:sha256:abc",
+					Image:   "ghcr.io/org@sha256:abc",
+					ImageID: "ghcr.io/org@sha256:abc",
 				},
 			},
 		}, result)
@@ -273,8 +273,8 @@ func TestFlattenProjectAssets(t *testing.T) {
 		assert.Equal(t, "sidecar", result[0].ContainerName)
 		assert.Equal(t, ptr("my-deploy"), result[0].ControllerName)
 		assert.Equal(t, &oci.RegistryImage{
-			Image:   "ghcr.io/org:sha256:def",
-			ImageID: "ghcr.io/org:sha256:def",
+			Image:   "ghcr.io/org@sha256:def",
+			ImageID: "ghcr.io/org@sha256:def",
 		}, result[0].Image)
 	})
 }
