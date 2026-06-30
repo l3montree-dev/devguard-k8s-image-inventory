@@ -1,6 +1,12 @@
-The MIT License (MIT)
+Project is based on: https://github.com/ckotzbauer/sbom-operator
+Original License: MIT 
+Original Copyright: Copyright (c) 2022 Christian Kotzbauer
+Forked on: 8cedfc566ceb4dfd06606d862e58f6ec75572878
+---
 
-Copyright (c) 2022 Christian Kotzbauer
+MIT License
+
+Copyright (c) 2026 L3montree GmbH and the DevGuard Contributors.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

@@ -48,4 +48,6 @@ go test ./...
 
 ## License
 
-[Apache 2.0](LICENSE)
+[MIT](LICENSE)
+
+This project is based on the [sbom-operator](https://github.com/ckotzbauer/sbom-operator) project.
