@@ -81,7 +81,7 @@ func NewDevGuardTarget(token, projectURL string, tags []string) *DevGuardTarget 
 	// check if the token is valid
 	ctx, cancel := context.WithTimeout(context.TODO(), 30*time.Second)
 	defer cancel()
-	req, err := http.NewRequestWithContext(ctx, "GET", "api/v1/whoami", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", "/api/v1/whoami", nil)
 	resp, err := client.Do(req)
 	if err != nil || resp.StatusCode != http.StatusOK {
 		panic("Failed to validate DevGuard token: " + err.Error())
