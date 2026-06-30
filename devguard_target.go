@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"log/slog"
@@ -8,6 +9,7 @@ import (
 	"net/url"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/l3montree-dev/devguard/pkg/devguard"
 	parser "github.com/novln/docker-parser"
@@ -73,9 +75,16 @@ func NewDevGuardTarget(token, projectURL string, tags []string) *DevGuardTarget 
 	}
 
 	client, err := devguard.NewHTTPClient(token, u.Scheme+"://"+u.Host)
-
 	if err != nil {
 		panic("Failed to create DevGuard HTTP client: " + err.Error())
+	}
+	// check if the token is valid
+	ctx, cancel := context.WithTimeout(context.TODO(), 30*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", "api/v1/whoami", nil)
+	resp, err := client.Do(req)
+	if err != nil || resp.StatusCode != http.StatusOK {
+		panic("Failed to validate DevGuard token: " + err.Error())
 	}
 
 	return &DevGuardTarget{
@@ -87,7 +96,9 @@ func NewDevGuardTarget(token, projectURL string, tags []string) *DevGuardTarget 
 }
 
 func (g *DevGuardTarget) LoadImages() ([]kubernetes.ImageInNamespace, error) {
-	req, err := http.NewRequest("GET", g.projectPath, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "GET", g.projectPath, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -234,7 +245,9 @@ func (g *DevGuardTarget) post(payload DevGuardRequest) error {
 	if err != nil {
 		return err
 	}
-	req, err := http.NewRequest("POST", g.projectPath, strings.NewReader(string(jsonBody)))
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, "POST", g.projectPath, strings.NewReader(string(jsonBody)))
 	if err != nil {
 		return err
 	}

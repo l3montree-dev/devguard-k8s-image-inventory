@@ -127,8 +127,6 @@ func (t *Trivy) ExecuteTrivy(img *oci.RegistryImage) (string, error) {
 		"--format", "cyclonedx",
 		"--output", sbomFile.Name(),
 		"--input", tmpDir,
-		"--cache-dir", "/tmp/.cache/trivy",
-		"-c", "trivy.yaml",
 	)
 
 	cmd.Stdout = &stdout
