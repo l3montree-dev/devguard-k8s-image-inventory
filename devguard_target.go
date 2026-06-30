@@ -193,6 +193,9 @@ func buildImageNameFromArtifact(artifact string) string {
 	}
 	digest := p[0]
 	repo := p[1]
+	if strings.HasPrefix(digest, "sha256:") {
+		return repo + "@" + digest
+	}
 	return repo + ":" + digest
 }
 
