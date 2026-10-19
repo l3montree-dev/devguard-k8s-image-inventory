@@ -6,7 +6,7 @@
 
 ## Documentation
 
-📖 **[https://docs.devguard.org/how-to-guides/integrations/k8s-image-inventory/](https://docs.devguard.org/how-to-guides/integrations/k8s-image-inventory/)**
+📖 **[https://docs.devguard.org/how-to-guides/integrations/kubernetes-devguard-integration/](https://docs.devguard.org/how-to-guides/integrations/kubernetes-devguard-integration/)**
 
 Installation, configuration reference, and usage examples are maintained there.
 
