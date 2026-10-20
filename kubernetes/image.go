@@ -18,11 +18,11 @@ type ImageInNamespace struct {
 }
 
 func (i ImageInNamespace) String() string {
-	// remove the tag from the image name
-	if strings.Contains(i.Image.Image, ":") {
-		return i.Namespace + "/" + strings.Split(i.Image.Image, ":")[0]
+	ref, err := parser.Parse(i.Image.Image)
+	if err != nil {
+		return i.Namespace + "/" + i.Image.Image
 	}
-	return i.Namespace + "/" + i.Image.Image
+	return i.Namespace + "/" + ref.Repository()
 }
 
 func ApplyProxyRegistry(img *oci.RegistryImage, log bool, registryProxyMap map[string]string) error {

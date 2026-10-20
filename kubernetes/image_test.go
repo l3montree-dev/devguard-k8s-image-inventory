@@ -58,3 +58,25 @@ func TestApplyProxyRegistry(t *testing.T) {
 		})
 	}
 }
+
+func TestImageInNamespaceString(t *testing.T) {
+	tests := []struct {
+		name     string
+		image    string
+		expected string
+	}{
+		{"plain with tag", "alpine:3.17", "ns/docker.io/library/alpine"},
+		{"no tag", "alpine", "ns/docker.io/library/alpine"},
+		{"registry with port", "my.registry.com:5000/team/app:1.0", "ns/my.registry.com:5000/team/app"},
+		{"registry with port and no tag", "my.registry.com:5000/team/app", "ns/my.registry.com:5000/team/app"},
+		{"digest only", "registry-1.docker.io/clamav/clamav@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ns/registry-1.docker.io/clamav/clamav"},
+		{"tag and digest", "busybox:1.37@sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", "ns/docker.io/library/busybox"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			i := kubernetes.ImageInNamespace{Namespace: "ns", Image: &oci.RegistryImage{Image: tt.image}}
+			assert.Equal(t, tt.expected, i.String())
+		})
+	}
+}
