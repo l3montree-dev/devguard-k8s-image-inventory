@@ -4,7 +4,6 @@ import (
 	"log/slog"
 	"os"
 	"os/signal"
-	"strings"
 	"syscall"
 
 	libk8s "github.com/ckotzbauer/libk8soci/pkg/kubernetes"
@@ -17,9 +16,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 )
 
+type sbomScanner interface {
+	ExecuteTrivy(img *oci.RegistryImage) (string, error)
+}
+
 type Processor struct {
 	K8s      *kubernetes.KubeClient
-	trivy    *Trivy
+	trivy    sbomScanner
 	Targets  []Target
 	imageMap map[string]bool
 }
@@ -31,8 +34,14 @@ func NewProcessor(k8s *kubernetes.KubeClient, triv *Trivy) *Processor {
 }
 
 func (p *Processor) ListenForPods() {
+	namespaces, err := p.K8s.NewNamespaceFilter(ProvidedConfig.NamespaceLabelSelector)
+	if err != nil {
+		slog.Error("Invalid namespace label selector.", "err", err)
+		return
+	}
+
 	var informer cache.SharedIndexInformer
-	informer, err := p.K8s.StartPodInformer(ProvidedConfig.PodLabelSelector, cache.ResourceEventHandlerFuncs{
+	informer, err = p.K8s.StartPodInformer(ProvidedConfig.PodLabelSelector, namespaces, cache.ResourceEventHandlerFuncs{
 		UpdateFunc: func(old, new any) {
 			oldPod := old.(*corev1.Pod)
 			newPod := new.(*corev1.Pod)
@@ -58,20 +67,11 @@ func (p *Processor) ListenForPods() {
 		return
 	}
 
-	p.runInformerAsync(informer)
+	p.runInformerAsync(informer, namespaces)
 }
 
 func (p *Processor) ProcessAllPods(pods []kubernetes.PodInfo, allImages []kubernetes.ImageInNamespace) {
 	p.executeScans(pods, allImages)
-}
-
-func getImageName(img *oci.RegistryImage) string {
-	// remove the tag if exists
-	if strings.Contains(img.Image, ":") {
-		return strings.Split(img.Image, ":")[0]
-	}
-
-	return img.Image
 }
 
 func (p *Processor) scanPod(pod kubernetes.PodInfo) {
@@ -79,23 +79,32 @@ func (p *Processor) scanPod(pod kubernetes.PodInfo) {
 	p.K8s.InjectPullSecrets(pod.PodInfo)
 
 	for _, container := range pod.Containers {
-		alreadyScanned := p.imageMap[pod.PodNamespace+"/"+getImageName(container.Image)]
-		if /*p.K8s.HasAnnotation(pod.Annotations, container) ||*/ alreadyScanned {
+		key := kubernetes.ImageInNamespace{Namespace: pod.PodNamespace, Image: container.Image}.String()
+		if /*p.K8s.HasAnnotation(pod.Annotations, container) ||*/ p.imageMap[key] {
 			slog.Debug("Image already scanned", "image", container.Image.Image)
 			continue
 		}
 
-		p.imageMap[pod.PodNamespace+"/"+getImageName(container.Image)] = true
 		sbom, err := p.trivy.ExecuteTrivy(container.Image)
 		if err != nil {
-			slog.Error("scan failed", "err", err)
+			slog.Error("scan failed", "err", err, "image", container.Image.Image)
+			errOccurred = true
 			continue
 		}
 
+		delivered := true
 		for _, t := range p.Targets {
 			err = t.ProcessSbom(NewContext(sbom, container.Image, container, &pod))
-			errOccurred = errOccurred || err != nil
+			delivered = delivered && err == nil
 		}
+
+		if !delivered {
+			errOccurred = true
+			continue
+		}
+
+		// only skip the image next time if the scan and the delivery succeeded
+		p.imageMap[key] = true
 	}
 
 	if !errOccurred && len(pod.Containers) > 0 {
@@ -224,7 +233,7 @@ func (p *Processor) cleanupImagesIfNeeded(info kubernetes.PodInfo, removedContai
 	}
 }
 
-func (p *Processor) runInformerAsync(informer cache.SharedIndexInformer) {
+func (p *Processor) runInformerAsync(informer cache.SharedIndexInformer, namespaces *kubernetes.NamespaceFilter) {
 	stop := make(chan struct{})
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
@@ -271,6 +280,10 @@ func (p *Processor) runInformerAsync(informer cache.SharedIndexInformer) {
 
 			for _, po := range pods {
 				pod := po.(*corev1.Pod)
+				if !namespaces.Selected(pod.Namespace) {
+					continue
+				}
+
 				slog.Debug("Pod found", "pod", pod.Name, "namespace", pod.Namespace)
 				info := p.K8s.ExtractPodInfos(*pod)
 				for _, c := range info.Containers {

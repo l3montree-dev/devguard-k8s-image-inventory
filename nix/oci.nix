@@ -3,12 +3,13 @@ let
   common = import ./common.nix { inherit self; };
 
   binary = import ./k8s-image-inventory.nix {
-    buildGoModule = pkgs.buildGoModule;
+    buildGoModule = pkgs.buildGo127Module;
     lib = pkgs.lib;
     inherit self system;
   };
 
-  trivyFromSource = pkgs.callPackage "${devguard}/nix/trivy.nix" { };
+  # trivy.nix returns { package; sbom; }
+  trivyFromSource = (pkgs.callPackage "${devguard}/nix/trivy.nix" { }).package;
 in
 {
   k8sImageInventoryOCI = pkgs.dockerTools.buildLayeredImage {

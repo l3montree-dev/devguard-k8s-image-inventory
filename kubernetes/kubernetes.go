@@ -45,9 +45,19 @@ func NewClient(ignoreAnnotations bool, fallbackPullSecretName string) *KubeClien
 	return &KubeClient{Client: client, ignoreAnnotations: ignoreAnnotations, fallbackPullSecret: fallbackPullSecret}
 }
 
-func (client *KubeClient) StartPodInformer(podLabelSelector string, handler cache.ResourceEventHandlerFuncs) (cache.SharedIndexInformer, error) {
+func (client *KubeClient) StartPodInformer(podLabelSelector string, namespaces *NamespaceFilter, handler cache.ResourceEventHandlerFuncs) (cache.SharedIndexInformer, error) {
 	informer := client.Client.CreatePodInformer(podLabelSelector)
-	_, err := informer.AddEventHandler(handler)
+	_, err := informer.AddEventHandler(cache.FilteringResourceEventHandler{
+		FilterFunc: func(obj any) bool {
+			if tombstone, ok := obj.(cache.DeletedFinalStateUnknown); ok {
+				obj = tombstone.Obj
+			}
+
+			pod, ok := obj.(*corev1.Pod)
+			return ok && namespaces.Selected(pod.Namespace)
+		},
+		Handler: handler,
+	})
 	if err != nil {
 		return nil, err
 	}

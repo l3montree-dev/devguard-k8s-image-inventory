@@ -12,7 +12,7 @@ import (
 
 // Kubernetes 1.36 + containerd >= 2.3 report only the config digest in
 // status.containerStatuses[].image. The image name must come from the pod spec.
-func TestExtractPodInfos_DigestOnlyStatusImageUsesSpecImage(t *testing.T) {
+func TestExtractPodInfosDigestOnlyStatusImageUsesSpecImage(t *testing.T) {
 	pod := corev1.Pod{
 		ObjectMeta: meta.ObjectMeta{Name: "p", Namespace: "opendesk"},
 		Spec: corev1.PodSpec{

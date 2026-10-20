@@ -8,7 +8,6 @@
     devguard.url = "github:l3montree-dev/devguard";
     devguard.inputs.nixpkgs.follows = "nixpkgs";
     devguard.inputs.nixpkgs-unstable.follows = "nixpkgs-unstable";
-    devguard.inputs.flake-utils.follows = "flake-utils";
   };
 
   outputs = { self, nixpkgs, nixpkgs-unstable, flake-utils, devguard }:
