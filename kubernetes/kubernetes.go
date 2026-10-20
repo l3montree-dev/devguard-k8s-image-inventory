@@ -69,7 +69,10 @@ func (client *KubeClient) StartPodInformer(podLabelSelector string, handler cach
 					ContainerStatuses:          pod.Status.ContainerStatuses,
 				},
 				Spec: corev1.PodSpec{
-					ImagePullSecrets: pod.Spec.ImagePullSecrets,
+					ImagePullSecrets:    pod.Spec.ImagePullSecrets,
+					InitContainers:      imageOnlyContainers(pod.Spec.InitContainers),
+					Containers:          imageOnlyContainers(pod.Spec.Containers),
+					EphemeralContainers: imageOnlyEphemeralContainers(pod.Spec.EphemeralContainers),
 				},
 			},
 			nil
@@ -101,10 +104,52 @@ func (client *KubeClient) ExtractPodInfos(pod corev1.Pod) PodInfo {
 			Name: pod.Name,
 		}
 	}
+	podInfo := client.Client.ExtractPodInfos(pod)
+	podInfo.Containers = withSpecImageNames(pod, podInfo.Containers)
 	return PodInfo{
-		PodInfo:         client.Client.ExtractPodInfos(pod),
+		PodInfo:         podInfo,
 		OwnerReferences: owner,
 	}
+}
+
+func withSpecImageNames(pod corev1.Pod, containers []*libk8s.ContainerInfo) []*libk8s.ContainerInfo {
+	specImages := make(map[string]string)
+	for _, c := range pod.Spec.InitContainers {
+		specImages[c.Name] = c.Image
+	}
+	for _, c := range pod.Spec.Containers {
+		specImages[c.Name] = c.Image
+	}
+	for _, c := range pod.Spec.EphemeralContainers {
+		specImages[c.Name] = c.Image
+	}
+
+	result := make([]*libk8s.ContainerInfo, 0, len(containers))
+	for _, c := range containers {
+		image := *c.Image
+		if specImage := specImages[c.Name]; specImage != "" {
+			image.Image = specImage
+		}
+		result = append(result, &libk8s.ContainerInfo{Name: c.Name, Image: &image})
+	}
+	return result
+}
+
+// imageOnlyContainers keeps only name and image to keep the informer cache small.
+func imageOnlyContainers(in []corev1.Container) []corev1.Container {
+	out := make([]corev1.Container, 0, len(in))
+	for _, c := range in {
+		out = append(out, corev1.Container{Name: c.Name, Image: c.Image})
+	}
+	return out
+}
+
+func imageOnlyEphemeralContainers(in []corev1.EphemeralContainer) []corev1.EphemeralContainer {
+	out := make([]corev1.EphemeralContainer, 0, len(in))
+	for _, c := range in {
+		out = append(out, corev1.EphemeralContainer{EphemeralContainerCommon: corev1.EphemeralContainerCommon{Name: c.Name, Image: c.Image}})
+	}
+	return out
 }
 
 func (client *KubeClient) InjectPullSecrets(pod libk8s.PodInfo) {
