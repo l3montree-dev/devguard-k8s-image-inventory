@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.1] - 2026-10-27
+
+Maintenance release. No functional changes.
+
+### Changed
+
+- Updated dependencies, including `devguard` to v1.17.1 and `libk8soci`
+- Updated the Nix flake inputs and the vendor hashes of the Nix image build
+- Pinned `k8s.io/kube-openapi` to the version required by the Kubernetes v0.37.1 libraries, since a newer version pulled in an incompatible `structured-merge-diff` major version and broke the build
+
 ## [v1.0.0] - 2026-10-20
 
 First release of devguard-k8s-image-inventory. The project is based on [sbom-operator](https://github.com/ckotzbauer/sbom-operator) 0.36.0 and reworked to report image inventories to DevGuard.
