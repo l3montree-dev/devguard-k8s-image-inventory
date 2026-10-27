@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.2] - 2026-10-27
+
+### Fixed
+
+- CI workflow requests the `id-token: write` permission, which the DevGuard reusable workflow needs
+
 ## [v1.0.1] - 2026-10-27
 
 Maintenance release. No functional changes.
