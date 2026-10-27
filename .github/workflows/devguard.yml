@@ -47,6 +47,7 @@ jobs:
           contents: read
           packages: write
           security-events: write
+          id-token: write
         with:
           nix-target-amd64: devguard-k8s-image-inventory-amd64
           nix-target-arm64: devguard-k8s-image-inventory-arm64
