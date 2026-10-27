@@ -15,14 +15,14 @@
       let
         unstablePkgs = nixpkgs-unstable.legacyPackages.${system};
         hostPkgs = nixpkgs.legacyPackages.${system} // {
-          buildGoModule = unstablePkgs.buildGoModule;
+          buildGoModule = unstablePkgs.buildGo127Module;
         };
 
         targetPkgsAmd64 = nixpkgs.legacyPackages.x86_64-linux // {
-          buildGoModule = nixpkgs-unstable.legacyPackages.x86_64-linux.buildGoModule;
+          buildGoModule = nixpkgs-unstable.legacyPackages.x86_64-linux.buildGo127Module;
         };
         targetPkgsArm64 = nixpkgs.legacyPackages.aarch64-linux // {
-          buildGoModule = nixpkgs-unstable.legacyPackages.aarch64-linux.buildGoModule;
+          buildGoModule = nixpkgs-unstable.legacyPackages.aarch64-linux.buildGo127Module;
         };
 
         ociAmd64 = import ./nix/oci.nix { pkgs = targetPkgsAmd64; system = "x86_64-linux"; inherit self devguard; };
