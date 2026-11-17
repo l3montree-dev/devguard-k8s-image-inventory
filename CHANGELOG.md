@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [v1.0.3] - 2026-11-17
+
+Maintenance release. No functional changes.
+
+### Changed
+
+- Updated dependencies, including `devguard` to v1.19.0, the Kubernetes libraries to v0.37.2 and `libstandard`
+- Updated the Nix flake inputs and the vendor hash of the Nix image build
+
 ## [v1.0.2] - 2026-10-27
 
 ### Fixed
