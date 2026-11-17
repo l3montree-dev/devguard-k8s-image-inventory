@@ -17,8 +17,8 @@ buildGoModule {
 
   # vendorHash differs per OS because `go mod vendor` applies build constraints.
   vendorHash = if lib.hasSuffix "-darwin" system
-    then "sha256-7Psyp4MAWGKQ1VNXNuwH1U1MRfaFlxL4heJ2il77Lqs="
-    else "sha256-7Psyp4MAWGKQ1VNXNuwH1U1MRfaFlxL4heJ2il77Lqs="; # run `nix build .#devguard-k8s-image-inventory-amd64` to get the linux hash
+    then "sha256-+NL5zBM6aa+UnxPtYPDveLNHlGIvEafeBdJfSW1UDNE="
+    else "sha256-+NL5zBM6aa+UnxPtYPDveLNHlGIvEafeBdJfSW1UDNE="; # run `nix build .#devguard-k8s-image-inventory-amd64` to get the linux hash
 
   ldflags = [
     "-s"
