@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+### Fixed
+
+- Images are pulled from the CRI `imageID` digest, and the registry proxy is applied to the parsed reference instead of the pod-spec string. Docker Hub shorthand specs (`busybox:1.38.0`, …) are now proxied too, and the scan pulls the digest the pod actually runs instead of re-resolving its tag.
+
 ## [v1.0.3] - 2026-11-17
 
 Maintenance release. No functional changes.

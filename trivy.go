@@ -58,10 +58,11 @@ func (t Trivy) downloadImageToLocalFilesystem(img *oci.RegistryImage) (string, e
 
 	ctx := context.Background()
 
-	repoName, tag, _, err := getRepoWithVersion(img)
+	repoName, tag, err := kubernetes.PullReference(img, t.proxyRegistryMap)
 	if err != nil {
 		return "", errors.Wrap(err, "could not parse image reference")
 	}
+	slog.Debug("Resolved pull reference", "repository", repoName, "reference", tag)
 	repo, err := remote.NewRepository(repoName)
 	if err != nil {
 		return "", errors.Wrap(err, "could not create remote repository")
@@ -88,20 +89,6 @@ func (t Trivy) downloadImageToLocalFilesystem(img *oci.RegistryImage) (string, e
 // ExecuteTrivy scans the provided image with Trivy and returns its CycloneDX SBOM.
 func (t *Trivy) ExecuteTrivy(img *oci.RegistryImage) (string, error) {
 	slog.Info("executing Trivy", "image", img.Image)
-
-	originalImage := img.Image
-	originalImageID := img.ImageID
-
-	// Apply any configured proxy registry overrides.
-	if err := kubernetes.ApplyProxyRegistry(img, true, t.proxyRegistryMap); err != nil {
-		return "", err
-	}
-
-	// Revert image info to the original values after scanning.
-	defer func() {
-		img.Image = originalImage
-		img.ImageID = originalImageID
-	}()
 
 	now := time.Now()
 
